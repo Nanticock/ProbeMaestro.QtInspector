@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--part of the rodentia icon theme by sixsixfive released under CC0 (https://creativecommons.org/publicdomain/zero/1.0/) on openclipart-->
+
+<svg
+   viewBox="0 0 35 35"
+   version="1.1"
+   id="svg26"
+   sodipodi:docname="search-icon-black.svg"
+   width="35"
+   height="35"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview28"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="false"
+     showgrid="false"
+     inkscape:snap-page="true"
+     fit-margin-top="2.5"
+     fit-margin-left="2.5"
+     fit-margin-right="2.5"
+     fit-margin-bottom="2.5"
+     lock-margins="true"
+     inkscape:zoom="17.166667"
+     inkscape:cx="21.349515"
+     inkscape:cy="16.864078"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="1"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-midpoints="false"
+     inkscape:snap-object-midpoints="false"
+     inkscape:snap-center="false"
+     width="35px"
+     inkscape:snap-bbox="true"
+     inkscape:bbox-nodes="true"
+     inkscape:snap-bbox-midpoints="true" />
+  <defs
+     id="0">
+    <linearGradient
+       id="2">
+      <stop
+         id="F"
+         stop-color="#555753"
+         stop-opacity="0.709" />
+      <stop
+         id="G"
+         offset="0.5"
+         stop-color="#555753"
+         stop-opacity="0.474" />
+      <stop
+         id="H"
+         offset="1"
+         stop-color="#555753"
+         stop-opacity="0" />
+    </linearGradient>
+    <linearGradient
+       id="3">
+      <stop
+         id="I"
+         stop-color="#fff" />
+      <stop
+         id="J"
+         offset="1"
+         stop-color="#fff"
+         stop-opacity="0" />
+    </linearGradient>
+    <linearGradient
+       id="4">
+      <stop
+         id="K"
+         stop-color="#eee"
+         stop-opacity="0.8" />
+      <stop
+         id="L"
+         offset="1"
+         stop-color="#eee"
+         stop-opacity="0" />
+    </linearGradient>
+    <radialGradient
+       cx="60.049999"
+       cy="51.389999"
+       r="15.03"
+       id="5"
+       xlink:href="#6"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(-1.404511,1.1888571,-1,-1.1813958,199.73811,11.750541)" />
+    <linearGradient
+       id="6">
+      <stop
+         id="M"
+         stop-color="#eee" />
+      <stop
+         id="N"
+         offset="1"
+         stop-color="#dcdcdc" />
+    </linearGradient>
+    <linearGradient
+       y1="3.7019999"
+       x2="0"
+       y2="43.080002"
+       id="7"
+       xlink:href="#4"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       x1="10.563"
+       y1="-42.009998"
+       x2="27.975"
+       y2="23.878"
+       id="8"
+       xlink:href="#4"
+       gradientUnits="userSpaceOnUse" />
+    <radialGradient
+       cx="26.5"
+       cy="46.749001"
+       r="20.905001"
+       id="9"
+       xlink:href="#2"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.1091549,0,41.645774)" />
+  </defs>
+  <g
+     id="1"
+     transform="translate(-0.65910186,0.09375)">
+    <path
+       id="path126"
+       style="fill:#1a1a1a;stroke:none;stroke-width:1.70736"
+       d="M 8.4832522,4.3412049 C 4.1871771,7.7766215 3.4896433,14.044307 6.9252982,18.340192 c 2.912749,3.62215 7.9436208,4.747966 12.1223798,2.712764 l 8.630211,10.777412 c 0.757221,0.945617 2.127571,1.09868 3.073677,0.342071 0.946107,-0.75661 1.099294,-2.12806 0.342072,-3.073677 L 22.478042,18.339625 C 25.387631,14.703727 25.389374,9.5370194 22.482239,5.8991592 19.046822,1.6030838 12.779137,0.90554989 8.4832522,4.3412049 Z m 2.3609268,2.9522303 c 2.665539,-2.1313149 6.554097,-1.6985552 8.685829,0.9666504 2.131316,2.6655394 1.698556,6.5540984 -0.96665,8.6858304 -2.665539,2.131315 -6.554098,1.698555 -8.6858298,-0.966651 -2.131315,-2.665539 -1.698555,-6.5540979 0.9666508,-8.6858298 z"
+       sodipodi:nodetypes="cccssscccccccc" />
+  </g>
+</svg>

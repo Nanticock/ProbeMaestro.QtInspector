@@ -1,0 +1,24 @@
+#ifndef QMLLISTREFERENCEPROPERTYEDITOR_H
+#define QMLLISTREFERENCEPROPERTYEDITOR_H
+
+#include "VariantListPropertyEditor.h"
+
+#include <QQmlListReference>
+
+class QmlListReferencePropertyEditor : public VariantListPropertyEditor
+{
+    // IPropertyEditor interface
+public:
+    virtual bool canHandleType(const QMetaType &type) const override;
+    virtual bool canHandleValue(const QVariant &value) const override;
+
+    virtual QTreeWidgetItem *createPropertyTreeItem(const PropertyData &propertyData, QTreeWidget &parentTreeWidget,
+                                                    QTreeWidgetItem *parentItem = nullptr, const QVariant &propertyValue = QVariant(),
+                                                    QObjectViewer *parentObjectViewer = nullptr) const override;
+
+protected:
+    virtual bool showListDialog(const PropertyData &propertyData, QObjectViewer *parentObjectViewer, const QQmlListReference &list) const;
+    virtual bool showListDialog(const PropertyData &propertyData, QObjectViewer *parentObjectViewer, const QVariantList &list) const override;
+};
+
+#endif // QMLLISTREFERENCEPROPERTYEDITOR_H

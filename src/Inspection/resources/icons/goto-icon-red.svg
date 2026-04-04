@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--part of the rodentia icon theme by sixsixfive released under CC0 (https://creativecommons.org/publicdomain/zero/1.0/) on openclipart-->
+
+<svg
+   viewBox="0 0 46.94759 46.950439"
+   version="1.1"
+   id="svg26"
+   sodipodi:docname="goto-icon-red.svg"
+   width="46.94759"
+   height="46.950439"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview28"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="false"
+     showgrid="false"
+     inkscape:snap-page="true"
+     fit-margin-top="2.5"
+     fit-margin-left="2.5"
+     fit-margin-right="2.5"
+     fit-margin-bottom="2.5"
+     lock-margins="true"
+     inkscape:zoom="8.5833333"
+     inkscape:cx="51.786408"
+     inkscape:cy="27.553398"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="1"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-midpoints="false"
+     inkscape:snap-object-midpoints="false"
+     inkscape:snap-center="false" />
+  <defs
+     id="0">
+    <linearGradient
+       id="2">
+      <stop
+         id="F"
+         stop-color="#555753"
+         stop-opacity="0.709" />
+      <stop
+         id="G"
+         offset="0.5"
+         stop-color="#555753"
+         stop-opacity="0.474" />
+      <stop
+         id="H"
+         offset="1"
+         stop-color="#555753"
+         stop-opacity="0" />
+    </linearGradient>
+    <linearGradient
+       id="3">
+      <stop
+         id="I"
+         stop-color="#fff" />
+      <stop
+         id="J"
+         offset="1"
+         stop-color="#fff"
+         stop-opacity="0" />
+    </linearGradient>
+    <linearGradient
+       id="4">
+      <stop
+         id="K"
+         stop-color="#eee"
+         stop-opacity="0.8" />
+      <stop
+         id="L"
+         offset="1"
+         stop-color="#eee"
+         stop-opacity="0" />
+    </linearGradient>
+    <radialGradient
+       cx="60.049999"
+       cy="51.389999"
+       r="15.03"
+       id="5"
+       xlink:href="#6"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(-1.404511,1.1888571,-1,-1.1813958,199.73811,11.750541)" />
+    <linearGradient
+       id="6">
+      <stop
+         id="M"
+         stop-color="#eee" />
+      <stop
+         id="N"
+         offset="1"
+         stop-color="#dcdcdc" />
+    </linearGradient>
+    <linearGradient
+       y1="3.7019999"
+       x2="0"
+       y2="43.080002"
+       id="7"
+       xlink:href="#4"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       x1="10.563"
+       y1="-42.009998"
+       x2="27.975"
+       y2="23.878"
+       id="8"
+       xlink:href="#4"
+       gradientUnits="userSpaceOnUse" />
+    <radialGradient
+       cx="26.5"
+       cy="46.749001"
+       r="20.905001"
+       id="9"
+       xlink:href="#2"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.1091549,0,41.645774)" />
+  </defs>
+  <g
+     id="1"
+     transform="translate(-0.65910186,0.09375)">
+    <path
+       id="path72"
+       style="fill:#782121;stroke-width:14.2474;stroke-linejoin:round;stroke-dasharray:56.9895, 28.4947"
+       inkscape:transform-center-x="-3.0155526"
+       d="M 24.592116,9.1701566 V 18.752201 H 5.5795232 V 29.199027 H 24.592116 v 8.393756 L 42.68627,23.38226 Z" />
+  </g>
+</svg>

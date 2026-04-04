@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/icons/close-icon-blue.svg</file>
+        <file>resources/icons/goto-icon-red.svg</file>
+        <file>resources/icons/next-icon-blue.svg</file>
+        <file>resources/icons/previous-icon-blue.svg</file>
+        <file>resources/icons/goto-parent-icon-black.svg</file>
+        <file>resources/icons/goto-super-class-icon-red-black.svg</file>
+        <file>resources/icons/search-icon-black.svg</file>
+        <file>resources/icons/refresh_icon.svg</file>
+        <file>resources/icons/save_icon.svg</file>
+        <file>resources/icons/export-header.svg</file>
+        <file>resources/icons/qrc-file-icon.svg</file>
+        <file>resources/icons/ProbeMaestro_icon.png</file>
+    </qresource>
+</RCC>

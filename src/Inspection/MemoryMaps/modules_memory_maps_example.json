@@ -1,0 +1,16 @@
+[
+    {
+        "module": "module1.dll",
+        "memoryMappings": [
+            {
+                "name": "function1",
+                "address": "0x7777bae",
+                "addressingMode": "FileOffset|MemoryOffset",
+                "tags": "General, Function, Object, QObject, QMetaObject"
+            }
+        ]
+    },
+    {
+        "module": "module2.dll"
+    }
+]
