@@ -29,7 +29,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->setupUi(this);
 
     ui->WindowChildrenTreeView->setModel(&m_windowChildrenTreeModel);
-    // Refer to: https://sl.bing.net/f4z7PDyUCEC
     ui->WindowChildrenTreeView->setRootIndex(QModelIndex());
     ui->dockWidget3->setWidget(&m_qObjectViewer);
 
@@ -42,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     // https://sl.bing.net/eLrE9p3QmjI
     ui->actionWindows->setMenu(new QMenu());
     ui->actionWindows->menu()->addAction(ui->dockWidget1->toggleViewAction());
-    ui->actionWindows->menu()->addAction(ui->dockWidget2->toggleViewAction());
     ui->actionWindows->menu()->addAction(ui->dockWidget3->toggleViewAction());
 
     connect(ui->actionInvoke_action, &QAction::triggered, this, &MainWindow::onInvokeActionTriggered);
@@ -75,7 +73,6 @@ void MainWindow::setRootObject(QObject *value)
     if (rootObject() == value)
         return;
 
-    //    m_propertyGrid.setObject(value);
     m_qObjectViewer.setCurrentObject(value);
     m_windowChildrenTreeModel.setRootObject(value);
 }
@@ -253,7 +250,7 @@ void MainWindow::onExportResourceTriggered()
     if (!fileDialog.exec())
         return;
 
-    QFile outputFile(fileDialog.selectedFiles().first());
+    QFile outputFile(fileDialog.selectedFiles().constFirst());
     if (!outputFile.open(QFile::WriteOnly))
     {
         QMessageBox::critical(this, "Error",
@@ -278,7 +275,7 @@ void MainWindow::onExportAllResourcesTriggered()
     if (!fileDialog.exec())
         return;
 
-    outputPath = fileDialog.selectedFiles().first();
+    outputPath = fileDialog.selectedFiles().constFirst();
 
     QVector<QDir> subdirs;
     subdirs << QDir(resourcesBaseDirPath);

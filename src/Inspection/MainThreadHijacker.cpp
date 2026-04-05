@@ -155,9 +155,6 @@ void MainThreadHijacker::initializeMods()
 
     mainMenuBarMenusList.append(modsMenu);
 
-    // Method 1: create mod menus using QmlComponents
-    QObject *mod1MenuItem = QQmlComponent(mainWindowEngine(), "qrc:/Mod1MenuItem.qml").create();
-
     // Method 2: create mod menus using the more complicated "createQmlObject" function
 
     // create the qml menu
@@ -170,7 +167,6 @@ void MainThreadHijacker::initializeMods()
 
     // append the created items to the mods menu
     QQmlListReference modsMenuItemsList(modsMenu, "items");
-    modsMenuItemsList.append(mod1MenuItem);
     modsMenuItemsList.append(mod2MenuItem);
 }
 
@@ -200,7 +196,6 @@ void MainThreadHijacker::onMainWindowDisplayed()
 {
     Compat::QtObjectsMemoryMap::initializeQmlSingletons();
 
-    // showComponentsTest();
     showAuxiliaryWindow();
     s_auxiliaryWindow->setRootObject(mainWindow());
 

@@ -868,56 +868,57 @@ void QObjectViewer::updateMetaTypeItem()
     m_metaTypeItem.takeChildren();
     m_metaTypeItem.setText(2, "");
 
-    if (!currentMetaObject())
+    const QMetaObject *mo = currentMetaObject();
+    if (!mo)
         return;
 
-    QString normalizedName = QMetaObject::normalizedType(currentMetaObject()->className());
+    QString className = mo->className();
+    QString normalizedName = QMetaObject::normalizedType(className.toUtf8().constData());
 
-    // in case the "sizeOf" for the
-    QMetaType metaType(QMetaType::type(currentMetaObject()->className()));
+    int typeId = QMetaType::type(className.toUtf8().constData());
 
-    if (!metaType.isValid())
-        QMetaType metaType(QMetaType::type(normalizedName.toStdString().c_str()));
+    // Try normalized name
+    if (typeId == QMetaType::UnknownType)
+    {
+        QByteArray norm = normalizedName.toUtf8();
+        typeId = QMetaType::type(norm.constData());
+    }
 
-    normalizedName += " *";
-    normalizedName = QMetaObject::normalizedType(normalizedName.toStdString().c_str());
+    // Try pointer type
+    if (typeId == QMetaType::UnknownType)
+    {
+        QString ptrName = normalizedName + " *";
+        ptrName = QMetaObject::normalizedType(ptrName.toUtf8().constData());
 
-    if (!metaType.isValid())
-        QMetaType metaType(QMetaType::type(normalizedName.toStdString().c_str()));
+        QByteArray ptr = ptrName.toUtf8();
+        typeId = QMetaType::type(ptr.constData());
+    }
 
-    m_metaTypeItem.setText(2, metaType.isValid() ? "Valid" : "Invalid");
+    QMetaType metaType(typeId);
 
-    QTreeWidgetItem *nameItem = new QTreeWidgetItem(&m_metaTypeItem);
-    nameItem->setText(0, "name");
-    nameItem->setText(2, metaType.metaObject()->className());
+    const bool isValid = metaType.isValid();
+    m_metaTypeItem.setText(2, isValid ? "Valid" : "Invalid");
 
-    QTreeWidgetItem *sizeOfItem = new QTreeWidgetItem(&m_metaTypeItem);
-    sizeOfItem->setText(0, "sizeOf");
-    sizeOfItem->setText(2, QString::number(metaType.sizeOf()));
+    if (!isValid)
+        return;
 
-    QTreeWidgetItem *flagsItem = new QTreeWidgetItem(&m_metaTypeItem);
-    flagsItem->setText(0, "flags");
-    flagsItem->setText(2, QString::number(metaType.flags()));
+    auto makeItem = [&](const QString &name, const QString &value)
+    {
+        auto *item = new QTreeWidgetItem(&m_metaTypeItem);
+        item->setText(0, name);
+        item->setText(2, value);
+    };
 
-    QTreeWidgetItem *idItem = new QTreeWidgetItem(&m_metaTypeItem);
-    idItem->setText(0, "id");
-    idItem->setText(2, QString::number(metaType.id()));
+    makeItem("name", metaType.metaObject() ? metaType.metaObject()->className() : "<null>");
 
-    QTreeWidgetItem *isRegisteredItem = new QTreeWidgetItem(&m_metaTypeItem);
-    isRegisteredItem->setText(0, "isRegistered");
-    isRegisteredItem->setText(2, metaType.isRegistered() ? "true" : "false");
+    makeItem("sizeOf", QString::number(metaType.sizeOf()));
+    makeItem("flags", QString::number(metaType.flags()));
+    makeItem("id", QString::number(metaType.id()));
+    makeItem("isRegistered", metaType.isRegistered() ? "true" : "false");
+    makeItem("isValid", metaType.isValid() ? "true" : "false");
 
-    QTreeWidgetItem *isValidItem = new QTreeWidgetItem(&m_metaTypeItem);
-    isValidItem->setText(0, "isValid");
-    isValidItem->setText(2, metaType.isValid() ? "true" : "false");
-
-    QTreeWidgetItem *hasRegisteredComparatorsItem = new QTreeWidgetItem(&m_metaTypeItem);
-    hasRegisteredComparatorsItem->setText(0, "hasRegisteredComparators");
-    hasRegisteredComparatorsItem->setText(2, metaType.hasRegisteredComparators(metaType.id()) ? "true" : "false");
-
-    QTreeWidgetItem *hasRegisteredDebugStreamOperatorItem = new QTreeWidgetItem(&m_metaTypeItem);
-    hasRegisteredDebugStreamOperatorItem->setText(0, "hasRegisteredDebugStreamOperator");
-    hasRegisteredDebugStreamOperatorItem->setText(2, metaType.hasRegisteredDebugStreamOperator(metaType.id()) ? "true" : "false");
+    makeItem("hasRegisteredComparators", metaType.hasRegisteredComparators(metaType.id()) ? "true" : "false");
+    makeItem("hasRegisteredDebugStreamOperator", metaType.hasRegisteredDebugStreamOperator(metaType.id()) ? "true" : "false");
 }
 
 void QObjectViewer::updateClassInfoItem()
