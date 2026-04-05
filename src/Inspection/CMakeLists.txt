@@ -16,8 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick Widgets REQUIRED)
 
-# Add an executable target
-add_executable(RunExeAsDll # we can add WIN32 to make it a GUI application
+add_library(QtInspector SHARED
     Exporters/IExporter.h
     Exporters/IExporter.cpp
     Exporters/QObjectToCppExporter.h
@@ -89,19 +88,21 @@ add_executable(RunExeAsDll # we can add WIN32 to make it a GUI application
     Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.cpp
     Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.h
     Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.cpp
-    main.cpp
     qml.qrc
+    QtInspector.cpp
+    QtInspector.h
+    main.cpp
 )
 
-target_link_libraries(RunExeAsDll
+target_link_libraries(QtInspector
     PRIVATE
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Quick
-    Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Quick
+        Qt${QT_VERSION_MAJOR}::Widgets
 )
 
 # system libraries
-target_link_libraries(RunExeAsDll
+target_link_libraries(QtInspector
     PRIVATE
         Kernel32
         Version
