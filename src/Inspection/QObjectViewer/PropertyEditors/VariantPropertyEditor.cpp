@@ -2,12 +2,13 @@
 
 #include "QObjectViewer/QObjectViewer.h"
 #include "VariantPropertyEditor_p.h"
+#include <compat_Qt.h>
 
 #include <QMetaProperty>
 
 bool VariantPropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<QVariant>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<QVariant>();
 }
 
 QObject *VariantPropertyEditorPrivate::variantToQObject(const QVariant &value)

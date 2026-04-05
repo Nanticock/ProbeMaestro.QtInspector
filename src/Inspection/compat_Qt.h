@@ -1,0 +1,99 @@
+#ifndef COMPAT_QT_H
+#define COMPAT_QT_H
+
+#include <QMetaType>
+#include <QVector>
+
+namespace PM
+{
+namespace internal
+{
+    inline int getMetaTypeId(const QMetaType &type)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
+        return type.id();
+#else
+        // NOTE: An ugly hack for old versions of qt that didn't have the id() member function
+        struct QMetaTypeData
+        {
+            QMetaType::TypedConstructor m_typedConstructor;
+            QMetaType::TypedDestructor m_typedDestructor;
+            QMetaType::SaveOperator m_saveOp;
+            QMetaType::LoadOperator m_loadOp;
+            QMetaType::Constructor m_constructor;
+            QMetaType::Destructor m_destructor;
+            void *m_extension; // space reserved for future use
+            uint m_size;
+            uint m_typeFlags;
+            uint m_extensionFlags;
+            int m_typeId;
+            const QMetaObject *m_metaObject;
+        };
+
+        const QMetaTypeData &typeData = reinterpret_cast<const QMetaTypeData &>(type);
+
+        return typeData.m_typeId;
+#endif
+    }
+
+    inline QByteArray getMetaTypeName(int typeId)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        return QMetaType(typeId).name();
+#else
+        return QMetaType::typeName(typeId);
+#endif
+    }
+
+    inline QByteArray getMetaTypeName(const QMetaType &metaType)
+    {
+        const int typeId = getMetaTypeId(metaType);
+
+        return getMetaTypeName(typeId);
+    }
+
+    template <typename T>
+    inline QByteArray getMetaTypeName()
+    {
+        const int typeId = qMetaTypeId<T>();
+
+        return PM::internal::getMetaTypeName(typeId);
+    }
+
+    namespace detail
+    {
+        template <typename T, typename InputIterator>
+        inline void reserveIfPossible(QVector<T> &vec, InputIterator first, InputIterator last, std::input_iterator_tag)
+        {
+            Q_UNUSED(vec);
+            Q_UNUSED(first);
+            Q_UNUSED(last);
+        }
+
+        template <typename T, typename InputIterator>
+        inline void reserveIfPossible(QVector<T> &vec, InputIterator first, InputIterator last, std::forward_iterator_tag)
+        {
+            vec.reserve(std::distance(first, last));
+        }
+    } // namespace detail
+
+    template <typename T, typename InputIterator>
+    inline QVector<T> createQVector(InputIterator first, InputIterator last)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+        return QVector<T>(first, last);
+#else
+        QVector<T> result;
+
+        detail::reserveIfPossible(result, first, last, typename std::iterator_traits<InputIterator>::iterator_category());
+
+        for (; first != last; ++first)
+            result.append(*first);
+
+        return result;
+#endif
+    }
+} // namespace internal
+} // namespace PM
+
+#endif // COMPAT_QT_H

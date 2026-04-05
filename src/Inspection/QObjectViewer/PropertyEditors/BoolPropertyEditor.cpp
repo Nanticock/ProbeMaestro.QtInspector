@@ -2,11 +2,13 @@
 
 #include "QObjectViewer/QObjectViewer.h"
 
+#include <compat_Qt.h>
+
 #include <QCheckBox>
 
 bool BoolPropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<bool>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<bool>();
 }
 
 QTreeWidgetItem *BoolPropertyEditor::createPropertyTreeItem(const PropertyData &propertyData, QTreeWidget &parentTreeWidget,

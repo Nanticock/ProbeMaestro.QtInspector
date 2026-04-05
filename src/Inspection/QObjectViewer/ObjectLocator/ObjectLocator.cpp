@@ -6,6 +6,7 @@
 #include <MainThreadHijacker.h>
 #include <QObjectViewer/PointerChecker/QMetaObjectPointerChecker.h>
 #include <QObjectViewer/PointerChecker/QObjectPointerChecker.h>
+#include <compat_Qt.h>
 
 #include <QApplication>
 #include <QtQml>
@@ -232,7 +233,7 @@ QObjectList ObjectLocator::searchForQmlObjectsOfType(const QString &typeName, bo
     QList<QQuickWindow *> qmlWindows = getQmlWindows();
 
     QSet<QObject *> visitedItems;
-    for (QQuickWindow *window : qmlWindows)
+    for (QQuickWindow *window : qAsConst(qmlWindows))
     {
         if (window == nullptr)
             continue;
@@ -240,7 +241,7 @@ QObjectList ObjectLocator::searchForQmlObjectsOfType(const QString &typeName, bo
         QObjectList childrenList = window->children();
 
         // we are using a QVector indtead of a QList because it has constant access time
-        QVector<QObject *> windowChildren(childrenList.begin(), childrenList.end());
+        QVector<QObject *> windowChildren = PM::internal::createQVector<QObject *>(childrenList.begin(), childrenList.end());
 
         for (int i = 0; i < windowChildren.count(); i++)
         {
@@ -262,7 +263,7 @@ QObjectList ObjectLocator::searchForQmlObjectsOfType(const QString &typeName, bo
 
             QObjectList childChildren = child->children();
             // append the children of the current object to the window children vector, and the visited items set
-            windowChildren << QVector<QObject *>(childChildren.begin(), childChildren.end());
+            windowChildren << PM::internal::createQVector<QObject *>(childChildren.begin(), childChildren.end());
 
             // if current object inherits the same meta object given by the user, then we add it to the result
             if (inheritsType(child->metaObject(), typeName))

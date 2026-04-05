@@ -3,6 +3,7 @@
 #include "IPropertyEditor_p.h"
 #include "QObjectViewer/QObjectViewer.h"
 #include "VariantPropertyEditor_p.h"
+#include <compat_Qt.h>
 
 #include <QApplication>
 #include <QDialog>
@@ -12,7 +13,7 @@
 
 bool VariantListPropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<QVariantList>() || type.id() == qMetaTypeId<QStringList>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<QVariantList>() || PM::internal::getMetaTypeId(type) == qMetaTypeId<QStringList>();
 }
 
 bool VariantListPropertyEditor::canHandleValue(const QVariant &value) const
@@ -76,7 +77,7 @@ bool VariantListPropertyEditor::showListDialog(const PropertyData &propertyData,
     // Value
     QTreeWidgetItem *rootValueItem = new QTreeWidgetItem(&treeWidget);
     rootValueItem->setExpanded(true);
-    rootValueItem->setText(0, QMetaType(qMetaTypeId<QVariantList>()).name());
+    rootValueItem->setText(0, PM::internal::getMetaTypeName<QVariantList>());
     rootValueItem->setText(2, QString::number(list.count()));
 
     IPropertyEditorPtr variantTypeEditor;

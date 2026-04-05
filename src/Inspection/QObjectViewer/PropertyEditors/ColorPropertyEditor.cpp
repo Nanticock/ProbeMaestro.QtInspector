@@ -3,16 +3,17 @@
 #include <QApplication>
 #include <QColor>
 #include <QColorDialog>
+#include <QDebug>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QDebug>
 
 #include <QObjectViewer/QObjectViewer.h>
+#include <compat_Qt.h>
 
 bool ColorPropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<QColor>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<QColor>();
 }
 
 QTreeWidgetItem *ColorPropertyEditor::createPropertyTreeItem(const PropertyData &propertyData, QTreeWidget &parentTreeWidget,
@@ -68,7 +69,7 @@ QTreeWidgetItem *ColorPropertyEditor::createPropertyTreeItem(const PropertyData 
                      [parentObjectViewer, propertyData, itemLabel, colorLabel]()
                      {
                          QObject *currentObject = parentObjectViewer->currentObject();
-                         if(currentObject == nullptr)
+                         if (currentObject == nullptr)
                              return;
 
                          QColor value = currentObject->property(propertyData.name).value<QColor>();

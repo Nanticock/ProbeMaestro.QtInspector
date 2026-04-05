@@ -4,6 +4,8 @@
 #include "QObjectViewer/QObjectViewer.h"
 #include "VariantPropertyEditor_p.h"
 
+#include <compat_Qt.h>
+
 #include <QApplication>
 #include <QDialog>
 #include <QHeaderView>
@@ -12,7 +14,7 @@
 
 bool JSValuePropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<QJSValue>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<QJSValue>();
 }
 
 bool JSValuePropertyEditor::canHandleValue(const QVariant &value) const
@@ -78,7 +80,7 @@ bool JSValuePropertyEditor::showDetailsDialog(QObjectViewer *parentObjectViewer,
     // Value
     QTreeWidgetItem *rootValueItem = new QTreeWidgetItem(&treeWidget);
     rootValueItem->setExpanded(true);
-    rootValueItem->setText(0, QMetaType(qMetaTypeId<QJSValue>()).name());
+    rootValueItem->setText(0, PM::internal::getMetaTypeName<QJSValue>());
     rootValueItem->setText(2, valueAsVariant.typeName());
 
     IPropertyEditorPtr variantTypeEditor = VariantPropertyEditorPrivate::getPropertyEditorForValue(valueAsVariant, parentObjectViewer);

@@ -2,6 +2,8 @@
 
 #include "QObjectViewer/QObjectViewer.h"
 
+#include <compat_Qt.h>
+
 #include <QApplication>
 #include <QDialog>
 #include <QHeaderView>
@@ -10,7 +12,7 @@
 
 bool QmlListReferencePropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<QQmlListReference>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<QQmlListReference>();
 }
 
 bool QmlListReferencePropertyEditor::canHandleValue(const QVariant &value) const
@@ -57,8 +59,7 @@ QTreeWidgetItem *QmlListReferencePropertyEditor::createPropertyTreeItem(const Pr
 
     parentTreeWidget.setItemWidget(propertyItem, 2, itemWidget);
 
-    QObject::connect(gotoButton, &QPushButton::clicked, gotoButton,
-                     [qmlListReference, this, propertyData, parentObjectViewer]()
+    QObject::connect(gotoButton, &QPushButton::clicked, gotoButton, [qmlListReference, this, propertyData, parentObjectViewer]()
                      { showListDialog(propertyData, parentObjectViewer, qmlListReference); });
 
     return propertyItem;

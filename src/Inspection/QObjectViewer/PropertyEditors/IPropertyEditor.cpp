@@ -35,7 +35,14 @@ QSize IPropertyEditorPrivate::calculateMaximumWindowSize(const QWidget &widget)
     const int bottomMargin = style->pixelMetric(QStyle::PM_LayoutBottomMargin);
     const int titleBarHeight = style->pixelMetric(QStyle::PM_TitleBarHeight);
 
-    return widget.screen()->availableSize() - QSize(leftMargin + rightMargin, topMargin + bottomMargin + titleBarHeight);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QSize availableScreenSize = widget.screen()->availableSize();
+#else
+    const auto primaryScreen = QGuiApplication::primaryScreen();
+    QSize availableScreenSize = primaryScreen == nullptr ? primaryScreen->availableSize() : QSize(500, 500);
+#endif
+
+    return availableScreenSize - QSize(leftMargin + rightMargin, topMargin + bottomMargin + titleBarHeight);
 }
 
 void IPropertyEditorPrivate::initDefaultEditors()

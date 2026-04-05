@@ -60,9 +60,6 @@ add_library(QtInspector SHARED
     QObjectViewer/PropertyEditors/QQmlListPropertyEditor.h
     QObjectViewer/PropertyEditors/QQmlListPropertyEditor_p.h
     QObjectViewer/PropertyEditors/QQmlListPropertyEditor.cpp
-    QObjectViewer/ConnectionInspector/ConnectionInspector.h
-    QObjectViewer/ConnectionInspector/ConnectionInspector.cpp
-    QObjectViewer/ConnectionInspector/QtCorePrivate/5/qobject_p.h
     WindowChildrenTreeModel/WindowChildrenTreeItem.h
     WindowChildrenTreeModel/WindowChildrenTreeItem.cpp
     WindowChildrenTreeModel/WindowChildrenTreeModel.h
@@ -92,6 +89,7 @@ add_library(QtInspector SHARED
     QtInspector.cpp
     QtInspector.h
     main.cpp
+    compat_Qt.h
 )
 
 target_link_libraries(QtInspector
@@ -99,12 +97,7 @@ target_link_libraries(QtInspector
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Quick
         Qt${QT_VERSION_MAJOR}::Widgets
-)
 
-# system libraries
-target_link_libraries(QtInspector
-    PRIVATE
         Kernel32
         Version
 )
-

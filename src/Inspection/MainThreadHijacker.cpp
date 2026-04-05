@@ -3,6 +3,7 @@
 #include <Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h>
 #include <MainWindow.h>
 #include <QObjectViewer/ObjectLocator/ObjectLocator.h>
+#include <compat_Qt.h>
 
 #include <QDebug>
 #include <QGuiApplication>
@@ -234,8 +235,8 @@ QVariant getMethodDefaultValue(QMetaMethod &method, QObject *context)
     methodReturnType.construct(returnBuffer.data());
 
     QVariant result;
-    if (method.invoke(context, Qt::DirectConnection, QGenericReturnArgument(methodReturnType.name(), returnBuffer.data())))
-        result = createVariantFromPointer(returnBuffer.data(), methodReturnType.id());
+    if (method.invoke(context, Qt::DirectConnection, QGenericReturnArgument(PM::internal::getMetaTypeName(methodReturnType), returnBuffer.data())))
+        result = createVariantFromPointer(returnBuffer.data(), PM::internal::getMetaTypeId(methodReturnType));
 
     methodReturnType.destruct(returnBuffer.data());
 
@@ -322,7 +323,7 @@ void generateHeaderFile(QObject *obj, const QString &filename)
         {
             if (j > 0)
                 out << ", ";
-            out << QMetaType(method.parameterType(j)).name() << " param" << j;
+            out << PM::internal::getMetaTypeName(method.parameterType(j)) << " param" << j;
         }
 
         out << ") const\n    {\n";

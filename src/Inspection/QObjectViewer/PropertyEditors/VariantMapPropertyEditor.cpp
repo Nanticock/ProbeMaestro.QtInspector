@@ -2,7 +2,8 @@
 #include "IPropertyEditor_p.h"
 #include "VariantPropertyEditor_p.h"
 
-#include "QObjectViewer/QObjectViewer.h"
+#include <QObjectViewer/QObjectViewer.h>
+#include <compat_Qt.h>
 
 #include <QApplication>
 #include <QDialog>
@@ -12,7 +13,7 @@
 
 bool VariantMapPropertyEditor::canHandleType(const QMetaType &type) const
 {
-    return type.id() == qMetaTypeId<QVariantMap>();
+    return PM::internal::getMetaTypeId(type) == qMetaTypeId<QVariantMap>();
 }
 
 QTreeWidgetItem *VariantMapPropertyEditor::createPropertyTreeItem(const PropertyData &propertyData, QTreeWidget &parentTreeWidget,
@@ -71,7 +72,7 @@ bool VariantMapPropertyEditor::showListDialog(const PropertyData &propertyData, 
     // Value
     QTreeWidgetItem *rootValueItem = new QTreeWidgetItem(&treeWidget);
     rootValueItem->setExpanded(true);
-    rootValueItem->setText(0, QMetaType(qMetaTypeId<QVariantList>()).name());
+    rootValueItem->setText(0, PM::internal::getMetaTypeName<QVariantList>());
     rootValueItem->setText(2, QString::number(map.size()));
 
     IPropertyEditorPtr variantTypeEditor;

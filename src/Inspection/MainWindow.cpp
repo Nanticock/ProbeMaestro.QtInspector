@@ -4,7 +4,6 @@
 #include <Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.h>
 #include <Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h>
 #include <MainThreadHijacker.h>
-#include <QObjectViewer/ConnectionInspector/ConnectionInspector.h>
 #include <QObjectViewer/ObjectLocator/ObjectLocator.h>
 
 #include <QComboBox>
@@ -362,16 +361,6 @@ void MainWindow::onDebugCommand5Triggered()
 
 void MainWindow::onDebugCommand6Triggered()
 {
-    QObject obj1;
-    QObject obj2;
-
-    connect(&obj1, &QObject::objectNameChanged, &obj2, &QObject::objectNameChanged);
-    connect(&obj2, &QObject::destroyed, [](QObject *) {});
-
-    ConnectionInspector::test(&obj1, "obj1");
-    ConnectionInspector::test(&obj2, "obj2");
-
-    obj2.setObjectName("obj2");
 }
 
 void MainWindow::onTreeViewSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

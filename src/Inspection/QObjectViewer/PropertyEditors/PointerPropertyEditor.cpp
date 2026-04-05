@@ -1,6 +1,7 @@
 #include "PointerPropertyEditor.h"
 
 #include "QObjectViewer/QObjectViewer.h"
+#include <compat_Qt.h>
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -13,7 +14,7 @@ bool PointerPropertyEditor::canHandleType(const QMetaType &type) const
     // TODO: redefine this definition
 
     // can handle any property with a type that is a pointer or inherits from QObject
-    const QMetaObject *propertyTypeMetaObject = QMetaType::metaObjectForType(type.id());
+    const QMetaObject *propertyTypeMetaObject = QMetaType::metaObjectForType(PM::internal::getMetaTypeId(type));
 
     if (!propertyTypeMetaObject)
         return false;

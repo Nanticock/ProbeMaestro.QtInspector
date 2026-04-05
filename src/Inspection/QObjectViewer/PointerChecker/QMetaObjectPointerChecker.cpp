@@ -14,6 +14,7 @@ bool QMetaObjectPointerChecker::performAdvancedChecks() const
     if (d.static_metacall && !isReadableAddress(d.static_metacall))
         return false;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) // FIXME: check the correct version of qt to do this on
     if (d.relatedMetaObjects && !isReadableAddress(d.relatedMetaObjects, sizeof(QMetaObject::SuperData)))
         return false;
 
@@ -22,6 +23,7 @@ bool QMetaObjectPointerChecker::performAdvancedChecks() const
 
     if (d.extradata && !isReadableAddress(d.extradata))
         return false;
+#endif
 
     return true;
 }

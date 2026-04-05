@@ -5,6 +5,7 @@
 #include "PointerChecker/PointerChecker.h"
 #include "PropertyEditors/IPropertyEditor_p.h"
 #include <Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h>
+#include <compat_Qt.h>
 
 #include <QApplication>
 #include <QClipboard>
@@ -913,12 +914,12 @@ void QObjectViewer::updateMetaTypeItem()
 
     makeItem("sizeOf", QString::number(metaType.sizeOf()));
     makeItem("flags", QString::number(metaType.flags()));
-    makeItem("id", QString::number(metaType.id()));
+    makeItem("id", QString::number(PM::internal::getMetaTypeId(metaType)));
     makeItem("isRegistered", metaType.isRegistered() ? "true" : "false");
     makeItem("isValid", metaType.isValid() ? "true" : "false");
 
-    makeItem("hasRegisteredComparators", metaType.hasRegisteredComparators(metaType.id()) ? "true" : "false");
-    makeItem("hasRegisteredDebugStreamOperator", metaType.hasRegisteredDebugStreamOperator(metaType.id()) ? "true" : "false");
+    makeItem("hasRegisteredComparators", metaType.hasRegisteredComparators(PM::internal::getMetaTypeId(metaType)) ? "true" : "false");
+    makeItem("hasRegisteredDebugStreamOperator", metaType.hasRegisteredDebugStreamOperator(PM::internal::getMetaTypeId(metaType)) ? "true" : "false");
 }
 
 void QObjectViewer::updateClassInfoItem()
