@@ -1,23 +1,19 @@
 #include "MainThreadHijacker.h"
 
-#include <Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h>
 #include <MainWindow.h>
 #include <QObjectViewer/ObjectLocator/ObjectLocator.h>
 #include <compat_Qt.h>
 
-#include <QDebug>
 #include <QGuiApplication>
-#include <QMessageBox>
+#include <QPointer>
 #include <QQmlComponent>
-#include <QQmlEngine>
-#include <QQmlListProperty>
-#include <QThread>
-#include <QWindow>
+#include <QTimer>
 
-#include <Windows.h>
-
-#define MAIN_WINDOW_ID "applicationWindow"
-#define SPLASH_SCREEN_WINDOW_ID "_splashScreen"
+namespace
+{
+constexpr char MAIN_WINDOW_ID[] = "applicationWindow";
+constexpr char SPLASH_SCREEN_WINDOW_ID[] = "_splashScreen";
+} // namespace
 
 static MainWindow *s_auxiliaryWindow = nullptr;
 
@@ -26,52 +22,53 @@ static QWindow *s_mainWindow = nullptr;
 static QWindow *s_splashScreenWindow = nullptr;
 
 static QSet<QWindow *> s_applicationWindows;
-static QThread *s_windowsMonitoringThread = nullptr;
+static QPointer<QTimer> s_windowsMonitoringTimer;
 
 MainThreadHijacker::MainThreadHijacker()
 {
-    connect(this, &MainThreadHijacker::mainWindowDisplayed, this, &MainThreadHijacker::onMainWindowDisplayed, Qt::QueuedConnection);
-    connect(this, &MainThreadHijacker::splashScreenCreated, this, &MainThreadHijacker::onSplashScreenCreated, Qt::QueuedConnection);
+    connect(this, &MainThreadHijacker::mainWindowDisplayed, this, &MainThreadHijacker::onMainWindowDisplayed);
+    connect(this, &MainThreadHijacker::splashScreenCreated, this, &MainThreadHijacker::onSplashScreenCreated);
 
-    connect(this, &MainThreadHijacker::windowCreated, this, &MainThreadHijacker::onWindowCreated, Qt::QueuedConnection);
-    connect(this, &MainThreadHijacker::windowDestroyed, this, &MainThreadHijacker::onWindowDestroyed, Qt::QueuedConnection);
+    connect(this, &MainThreadHijacker::windowCreated, this, &MainThreadHijacker::onWindowCreated);
+    connect(this, &MainThreadHijacker::windowDestroyed, this, &MainThreadHijacker::onWindowDestroyed);
 }
 
 void MainThreadHijacker::startMonitoringApplicationWindows()
 {
-    // if the application window monitoring thread is already up, then nothing to be done
-    if (s_windowsMonitoringThread != nullptr)
+    if (s_windowsMonitoringTimer == nullptr)
+    {
+        s_windowsMonitoringTimer = new QTimer(this);
+        s_windowsMonitoringTimer->setInterval(1);
+
+        connect(s_windowsMonitoringTimer.data(), &QTimer::timeout, this,
+                [this]()
+                {
+                    for (QWindow *window : QGuiApplication::allWindows())
+                    {
+                        if (s_applicationWindows.contains(window))
+                            continue;
+
+                        s_applicationWindows << window;
+                        emit windowCreated(window);
+
+                        // remove the window from the application windows list when it gets destroyed
+                        QObject::connect(
+                            window, &QWindow::destroyed, window,
+                            [this, window](QObject *)
+                            {
+                                s_applicationWindows.remove(window);
+                                emit windowDestroyed(window);
+                            },
+                            Qt::QueuedConnection);
+                    }
+                });
+    }
+
+    // if the application window monitoring Timer is already up, then nothing to be done
+    if (s_windowsMonitoringTimer->isActive())
         return;
 
-    s_windowsMonitoringThread = QThread::create(
-        [this]()
-        {
-            while (true)
-            {
-                for (QWindow *window : QGuiApplication::allWindows())
-                {
-                    if (s_applicationWindows.contains(window))
-                        continue;
-
-                    s_applicationWindows << window;
-                    emit windowCreated(window);
-
-                    // remove the window from the application windows list when it gets destroyed
-                    QObject::connect(
-                        window, &QWindow::destroyed, window,
-                        [this, window](QObject *)
-                        {
-                            s_applicationWindows.remove(window);
-                            emit windowDestroyed(window);
-                        },
-                        Qt::QueuedConnection);
-                }
-
-                QThread::usleep(1);
-            }
-        });
-
-    s_windowsMonitoringThread->start();
+    s_windowsMonitoringTimer->start();
 }
 
 QWindow *MainThreadHijacker::mainWindow()
@@ -89,7 +86,6 @@ QQmlEngine *MainThreadHijacker::mainWindowEngine()
     if (mainWindow() == nullptr)
         return nullptr;
 
-    // Refer to this: https://sl.bing.net/iy3MTdzLOvc
     return qmlEngine(mainWindow());
 }
 
@@ -125,15 +121,6 @@ QObject *MainThreadHijacker::createQmlObject(const QString &uri, int versionMajo
 void MainThreadHijacker::initialize()
 {
     startMonitoringApplicationWindows();
-
-    // QmlEngine internal objects registration mechanism, refer to:
-    // https://sl.bing.net/jHxW1IB24T6
-    // https://sl.bing.net/hE395JxnqfI
-    // https://codebrowser.dev/qt5/qtdeclarative/src/qml/qml/qqmlmetatype_p.h.html#QQmlMetaType
-    // https://sl.bing.net/kkZLAi2VfXM
-
-    //    QQmlComponent component(activeEngine, "qrc:/AuxiliaryWindow.qml");
-    //    component.create();
 }
 
 void MainThreadHijacker::initializeMods()
@@ -160,7 +147,8 @@ void MainThreadHijacker::initializeMods()
 
     // create the qml menu
     QObject *mod2MenuItem = createQmlObject("QtQuick.Controls", 1, 2, "MenuItem", mainWindowEngine());
-    mod2MenuItem->setProperty("text", "Mod2");
+    mod2MenuItem->setProperty("text", "Show auxiliary window");
+    // FIXME: find a way to get the name of the method if i have its function pointer
     QObject::connect(mod2MenuItem, ObjectLocator::getMetaMethodByName(mod2MenuItem, "triggered"), this,
                      ObjectLocator::getMetaMethodByName(this, "onMod2MenuItemClicked"));
 
@@ -179,179 +167,12 @@ void MainThreadHijacker::showAuxiliaryWindow()
     s_auxiliaryWindow->show();
 }
 
-void MainThreadHijacker::showComponentsTest()
-{
-    QQmlEngine *engine = mainWindowEngine();
-
-    if (!engine)
-        return;
-
-    QQmlComponent component(engine, "qrc:/ComponentsTestWindow.qml");
-    component.create();
-
-    if (component.status() == QQmlComponent::Error)
-        qWarning() << component.errorString();
-}
-
 void MainThreadHijacker::onMainWindowDisplayed()
 {
-    Compat::QtObjectsMemoryMap::initializeQmlSingletons();
-
     showAuxiliaryWindow();
     s_auxiliaryWindow->setRootObject(mainWindow());
 
     initializeMods();
-}
-
-QVariant createVariantFromPointer(void *ptr, int typeId)
-{
-    if (!ptr || typeId == QMetaType::UnknownType)
-        return QVariant(); // Return an invalid QVariant if type is unknown
-
-    return QVariant(typeId, ptr);
-}
-
-QStringList extractNamespaces(const QString &className)
-{
-    QStringList parts = className.split("::");
-    if (parts.size() > 1)
-        parts.removeLast(); // Removes the class name, leaving only the namespace segments
-    return parts;
-}
-
-QVariant getMethodDefaultValue(QMetaMethod &method, QObject *context)
-{
-    if (!method.isValid())
-        return {};
-
-    if (method.parameterCount() != 0)
-        return {};
-
-    QMetaType methodReturnType(method.returnType());
-    if (!methodReturnType.isValid())
-        return {};
-
-    QVector<char> returnBuffer(methodReturnType.sizeOf());
-    methodReturnType.construct(returnBuffer.data());
-
-    QVariant result;
-    if (method.invoke(context, Qt::DirectConnection, QGenericReturnArgument(PM::internal::getMetaTypeName(methodReturnType), returnBuffer.data())))
-        result = createVariantFromPointer(returnBuffer.data(), PM::internal::getMetaTypeId(methodReturnType));
-
-    methodReturnType.destruct(returnBuffer.data());
-
-    return result;
-}
-
-void generateHeaderFile(QObject *obj, const QString &filename)
-{
-    if (!obj)
-    {
-        qWarning() << "Invalid QObject pointer";
-        return;
-    }
-
-    const QMetaObject *metaObj = obj->metaObject();
-    QString className(metaObj->className());
-    QStringList namespaces = extractNamespaces(className);
-    QString pureClassName = className.split("::").last(); // Extracts actual class name
-
-    QFile file(filename);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
-        qWarning() << "Failed to open file for writing";
-        return;
-    }
-
-    QTextStream out(&file);
-    out << "#pragma once\n\n";
-    out << "#include <QObject>\n\n";
-
-    for (const QString &ns : namespaces)
-        out << "namespace " << ns << " {\n";
-
-    out << "\nclass " << pureClassName << " : public QObject {\n";
-    out << "    Q_OBJECT\n"
-        << "public:\n";
-
-    out << "    /* Properties\n\n";
-    const int firstNonQObjectPropertyIndex = 1;
-    for (int i = firstNonQObjectPropertyIndex; i < metaObj->propertyCount(); ++i)
-    {
-        QMetaProperty property = metaObj->property(i);
-        if (!property.isValid() || !property.isReadable())
-            continue;
-
-        QVariant value = property.read(obj);
-        out << "    /**\n";
-        out << "     * @property " << property.name() << "\n";
-        out << "     * @default " << value.toString() << "\n";
-        out << "     */\n";
-        out << "    Q_PROPERTY(" << property.typeName() << " " << property.name();
-
-        if (property.isWritable())
-            out << " READ " << property.name() << " WRITE " << property.name() << ")";
-        else
-            out << " READ " << property.name() << ")";
-
-        out << "\n\n";
-    }
-    out << "    */\n";
-
-    // **Method Extraction Logic**
-    const int firstNonQObjectFunctionIndex = 5;
-    for (int i = firstNonQObjectFunctionIndex; i < metaObj->methodCount(); ++i)
-    {
-        QMetaMethod method = metaObj->method(i);
-        qInfo() << "Processing method:" << method.name();
-
-        if (!method.isValid() || method.access() != QMetaMethod::Public)
-            continue;
-
-        out << "    /**\n";
-
-        QVariant defaultValue = getMethodDefaultValue(method, obj);
-        if (defaultValue.isValid())
-            out << "     * @default " << defaultValue.toString() << "\n";
-        else
-            out << "     * @note Unable to retrieve default value due to invalid return type.\n";
-
-        out << "     */\n";
-        out << "    Q_INVOKABLE " << method.typeName() << " " << method.name() << "(";
-
-        for (int j = 0; j < method.parameterCount(); ++j)
-        {
-            if (j > 0)
-                out << ", ";
-            out << PM::internal::getMetaTypeName(method.parameterType(j)) << " param" << j;
-        }
-
-        out << ") const\n    {\n";
-
-        if (defaultValue.isValid())
-        {
-            QString returnValue = defaultValue.toString();
-            if (defaultValue.type() == qMetaTypeId<QString>())
-                returnValue = '\"' + returnValue + '\"';
-
-            out << "        return " << returnValue << ";\n";
-        }
-        else
-        {
-            out << "        return {};\n";
-        }
-
-        out << "    }\n\n";
-    }
-
-    out << "};\n";
-
-    for (const QString &ns : qAsConst(namespaces))
-        out << "} // namespace " << ns << "\n";
-
-    file.flush();
-    file.close();
-    qDebug() << "Header file generated successfully:" << filename;
 }
 
 void MainThreadHijacker::onSplashScreenCreated()
@@ -360,13 +181,12 @@ void MainThreadHijacker::onSplashScreenCreated()
 
 void MainThreadHijacker::onMod2MenuItemClicked()
 {
-    qInfo() << "mod2 triggered";
-    QMessageBox("Mod2", "Hello from mod 2", QMessageBox::Icon::Information, 0, 0, 0).exec();
+    showAuxiliaryWindow();
 }
 
 void MainThreadHijacker::onWindowCreated(QWindow *window)
 {
-    QString windowId = ObjectLocator::getQmlObjectId(window);
+    const QString windowId = ObjectLocator::getQmlObjectId(window);
 
     // handle main window when it becomes visible
     if (windowId == MAIN_WINDOW_ID)
@@ -394,7 +214,8 @@ void MainThreadHijacker::onWindowCreated(QWindow *window)
 
 void MainThreadHijacker::onWindowDestroyed(QWindow *window)
 {
-    QString windowId = ObjectLocator::getQmlObjectId(window);
+    // FIXME: replace this with QPointer usage
+    const QString windowId = ObjectLocator::getQmlObjectId(window);
 
     if (windowId == MAIN_WINDOW_ID)
         s_mainWindow = nullptr;

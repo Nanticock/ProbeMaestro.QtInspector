@@ -31,7 +31,6 @@ signals:
 public slots:
     void initialize();
     void initializeMods();
-    void showComponentsTest();
     void showAuxiliaryWindow();
 
 private slots:
