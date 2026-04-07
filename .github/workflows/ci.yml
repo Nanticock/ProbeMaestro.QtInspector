@@ -38,10 +38,7 @@ jobs:
         # Do NOT use cmd.exe batch syntax (no "cd", "mkdir /Y", "set VAR=",
         # etc.) or Bash syntax here — stick to PowerShell for portability.
         run: |
-          YAML_CONFIG='image: Visual Studio 2015
-build_script:
-  - ps: cmake -B build -S . -G "Visual Studio 14 2015"
-  - ps: cmake --build build --config Release'
+          YAML_CONFIG=$(printf 'image: Visual Studio 2015\nbuild_script:\n  - ps: cmake -B build -S . -G "Visual Studio 14 2015"\n  - ps: cmake --build build --config Release')
 
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
             "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings/yaml" \
