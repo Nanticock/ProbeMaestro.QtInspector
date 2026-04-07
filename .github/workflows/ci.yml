@@ -81,7 +81,8 @@ jobs:
           BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           echo "Using branch: $BRANCH"
 
-          RESPONSE=$(curl -s -X POST https://ci.appveyor.com/api/builds \
+          RESPONSE=$(curl -s -X POST \
+            "https://ci.appveyor.com/api/account/$APPVEYOR_ACCOUNT/builds" \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{
@@ -90,12 +91,12 @@ jobs:
               \"branch\": \"$BRANCH\"
             }")
 
-          echo "$RESPONSE"
+          echo "POST /api/builds response: $RESPONSE"
 
           BUILD_VERSION=$(echo "$RESPONSE" | jq -r '.version')
 
           if [ "$BUILD_VERSION" = "null" ] || [ -z "$BUILD_VERSION" ]; then
-            echo "Failed to get build version!"
+            echo "::error::AppVeyor POST /builds failed — response: $RESPONSE"
             exit 1
           fi
 
