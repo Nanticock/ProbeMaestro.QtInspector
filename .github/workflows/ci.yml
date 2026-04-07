@@ -2,6 +2,10 @@ name: CI
 
 on: [push, pull_request]
 
+env:
+  APPVEYOR_ACCOUNT: MostafaNanticock
+  APPVEYOR_PROJECT: probemaestro-qtinspector
+
 jobs:
   build-msvc2022:
     runs-on: windows-latest
@@ -20,20 +24,28 @@ jobs:
 
     steps:
       - name: Trigger AppVeyor build
-        id: trigger
         run: |
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          echo "Using branch: $BRANCH"
+
           RESPONSE=$(curl -s -X POST https://ci.appveyor.com/api/builds \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{
-              "accountName": "MostafaNanticock",
-              "projectSlug": "probemaestro-qtinspector",
-              "branch": "main"
-            }')
+            -d "{
+              \"accountName\": \"$APPVEYOR_ACCOUNT\",
+              \"projectSlug\": \"$APPVEYOR_PROJECT\",
+              \"branch\": \"$BRANCH\"
+            }")
 
           echo "$RESPONSE"
 
-          BUILD_ID=$(echo $RESPONSE | jq -r '.build.buildId')
+          BUILD_ID=$(echo "$RESPONSE" | jq -r '.buildId')
+
+          if [ "$BUILD_ID" = "null" ] || [ -z "$BUILD_ID" ]; then
+            echo "Failed to get build ID!"
+            exit 1
+          fi
+
           echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
 
         env:
@@ -44,9 +56,9 @@ jobs:
           while true; do
             RESPONSE=$(curl -s \
               -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-              https://ci.appveyor.com/api/builds/$BUILD_ID)
+              "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/build/$BUILD_ID")
 
-            STATUS=$(echo $RESPONSE | jq -r '.build.status')
+            STATUS=$(echo "$RESPONSE" | jq -r '.build.status')
             echo "Status: $STATUS"
 
             if [ "$STATUS" = "success" ]; then
