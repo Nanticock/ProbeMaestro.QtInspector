@@ -73,13 +73,6 @@ jobs:
             exit 1
           fi
 
-          # Read back the stored buildScripts to verify the format AppVeyor accepted
-          VERIFY=$(curl -s \
-            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-            "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings")
-          echo "Stored buildMode: $(echo "$VERIFY" | jq -r '.settings.configuration.buildMode')"
-          echo "Stored buildScripts: $(echo "$VERIFY" | jq '.settings.configuration.buildScripts')"
-
         env:
           APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
 
