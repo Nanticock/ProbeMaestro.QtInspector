@@ -38,15 +38,21 @@ jobs:
         # Do NOT use cmd.exe batch syntax (no "cd", "mkdir /Y", "set VAR=",
         # etc.) or Bash syntax here — stick to PowerShell for portability.
         run: |
-          # Write YAML to a temp file to avoid shell quoting issues when
-          # passing the content to curl (double quotes in generator name
-          # would be corrupted by variable expansion in --data-binary "$VAR").
-          cat > /tmp/appveyor_build.yml << 'APPVEYOR_YAML_EOF'
-image: Visual Studio 2015
-build_script:
-  - ps: cmake -B build -S . -G 'Visual Studio 14 2015'
-  - ps: cmake --build build --config Release
-APPVEYOR_YAML_EOF
+          # Write AppVeyor YAML to a temp file using printf to avoid two problems:
+          # 1. Heredoc delimiters/content at column 0 break the GitHub Actions YAML
+          #    block scalar parser (GitHub sees them as top-level YAML keys).
+          # 2. Variable expansion in --data-binary "$VAR" would corrupt quoted strings.
+          # Single-quoted printf strings are never expanded by the shell, so double
+          # quotes inside (required for the cmake generator name) reach AppVeyor intact.
+          printf 'image: Visual Studio 2015\n'                                          > /tmp/appveyor_build.yml
+          printf 'build_script:\n'                                                      >> /tmp/appveyor_build.yml
+          printf '  - ps: cmake -B build -S . -G "Visual Studio 14 2015"\n'            >> /tmp/appveyor_build.yml
+          printf '  - ps: cmake --build build --config Release\n'                      >> /tmp/appveyor_build.yml
+          printf 'test: off\n'                                                          >> /tmp/appveyor_build.yml
+
+          echo "--- AppVeyor config being pushed ---"
+          cat /tmp/appveyor_build.yml
+          echo "-------------------------------------"
 
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
             "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings/yaml" \
