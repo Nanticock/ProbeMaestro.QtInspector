@@ -23,50 +23,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Push build config to AppVeyor
-        # We push the project YAML via the AppVeyor API before every build because
-        # this project has "ignoreAppveyorYml: true" in its AppVeyor settings, so
-        # AppVeyor ignores the appveyor.yml in the repository root and uses the
-        # configuration stored server-side instead.
+      - name: Configure AppVeyor project for cmake build
+        # We use PUT /api/projects (JSON settings) instead of PUT /api/projects/.../settings/yaml
+        # because the YAML endpoint returns HTTP 500 (NullReferenceException) — a server-side
+        # bug in AppVeyor's YAML parser. The JSON endpoint is stable and does not go through
+        # AppVeyor's buggy YAML ingestion path.
+        #
+        # We GET the full settings first so we only mutate the two fields we care about
+        # (buildMode and buildScripts), leaving all other project settings intact.
         #
         # SCRIPTING LANGUAGE CHOICE — PowerShell Core (pwsh):
-        # AppVeyor build_script commands prefixed with "ps:" run in PowerShell.
-        # On Windows images this is Windows PowerShell 5.1; on Linux/macOS images
-        # AppVeyor uses PowerShell Core (pwsh).  Because PowerShell Core is
-        # available on Windows, macOS, and Linux, ALL build script commands in
-        # this project MUST be written as PowerShell and prefixed with "ps:".
-        # Do NOT use cmd.exe batch syntax (no "cd", "mkdir /Y", "set VAR=",
-        # etc.) or Bash syntax here — stick to PowerShell for portability.
+        # Build script items are stored as strings. Items prefixed with "ps:" run in
+        # PowerShell; un-prefixed items run in cmd.exe. ALL build commands in this
+        # project MUST be written as PowerShell and prefixed with "ps:" because
+        # PowerShell Core (pwsh) is available on ALL AppVeyor images (Windows, Linux,
+        # macOS) and is the only cross-platform shell choice. Do NOT write bare cmd.exe
+        # batch commands (cd, mkdir, set, etc.) in buildScripts.
+        #
+        # cmake -B / -S flags: cmake 3.12+ is pre-installed on all AppVeyor images
+        # (including VS 2015 — https://www.appveyor.com/docs/windows-images-software/).
+        # We use the modern -B build -S . form rather than the mkdir+cd+.. form.
         run: |
-          # Write AppVeyor YAML to a temp file using printf to avoid two problems:
-          # 1. Heredoc delimiters/content at column 0 break the GitHub Actions YAML
-          #    block scalar parser (GitHub sees them as top-level YAML keys).
-          # 2. Variable expansion in --data-binary "$VAR" would corrupt quoted strings.
-          # Single-quoted printf strings are never expanded by the shell, so double
-          # quotes inside (required for the cmake generator name) reach AppVeyor intact.
-          printf 'image: Visual Studio 2015\n'                                          > /tmp/appveyor_build.yml
-          printf 'build_script:\n'                                                      >> /tmp/appveyor_build.yml
-          printf '  - ps: cmake -B build -S . -G "Visual Studio 14 2015"\n'            >> /tmp/appveyor_build.yml
-          printf '  - ps: cmake --build build --config Release\n'                      >> /tmp/appveyor_build.yml
-          printf 'test: off\n'                                                          >> /tmp/appveyor_build.yml
+          GET_RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
+            "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings")
 
-          echo "--- AppVeyor config being pushed ---"
-          cat /tmp/appveyor_build.yml
-          echo "-------------------------------------"
+          echo "Current buildMode: $(echo "$GET_RESPONSE" | jq -r '.settings.configuration.buildMode')"
+
+          UPDATED=$(echo "$GET_RESPONSE" | jq \
+            --arg cmd1 'ps: cmake -B build -S . -G "Visual Studio 14 2015"' \
+            --arg cmd2 'ps: cmake --build build --config Release' \
+            '.settings.configuration.buildMode = "script" |
+             .settings.configuration.buildScripts = [$cmd1, $cmd2] |
+             .settings')
 
           curl -s -w "\n%{http_code}" -X PUT \
-            "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings/yaml" \
+            "https://ci.appveyor.com/api/projects" \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-            -H "Content-Type: text/plain" \
-            --data-binary "@/tmp/appveyor_build.yml" \
+            -H "Content-Type: application/json" \
+            -d "$UPDATED" \
             > /tmp/appveyor_put_response.txt
 
           HTTP_STATUS=$(tail -n 1 /tmp/appveyor_put_response.txt)
           RESPONSE_BODY=$(head -n -1 /tmp/appveyor_put_response.txt)
-          echo "PUT settings/yaml response: HTTP $HTTP_STATUS"
+          echo "PUT /api/projects HTTP $HTTP_STATUS"
           echo "Response body: $RESPONSE_BODY"
           if [ "$HTTP_STATUS" != "204" ]; then
-            echo "::error::AppVeyor PUT /settings/yaml failed HTTP $HTTP_STATUS — body: $RESPONSE_BODY"
+            echo "::error::AppVeyor PUT /api/projects failed HTTP $HTTP_STATUS — $RESPONSE_BODY"
             exit 1
           fi
 
