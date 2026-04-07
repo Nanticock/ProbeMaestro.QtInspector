@@ -51,10 +51,10 @@ jobs:
           echo "Current buildMode: $(echo "$GET_RESPONSE" | jq -r '.settings.configuration.buildMode')"
 
           UPDATED=$(echo "$GET_RESPONSE" | jq \
-            --arg cmd1 'ps: cmake -B build -S . -G "Visual Studio 14 2015"' \
-            --arg cmd2 'ps: cmake --build build --config Release' \
+            --arg cmd1 'cmake -B build -S . -G "Visual Studio 14 2015"' \
+            --arg cmd2 'cmake --build build --config Release' \
             '.settings.configuration.buildMode = "script" |
-             .settings.configuration.buildScripts = [$cmd1, $cmd2] |
+             .settings.configuration.buildScripts = [{"ps": $cmd1}, {"ps": $cmd2}] |
              .settings')
 
           curl -s -w "\n%{http_code}" -X PUT \
