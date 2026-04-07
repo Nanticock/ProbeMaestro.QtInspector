@@ -2,6 +2,10 @@ name: CI
 
 on: [push, pull_request]
 
+env:
+  APPVEYOR_ACCOUNT: MostafaNanticock
+  APPVEYOR_PROJECT: probemaestro-qtinspector
+
 jobs:
   build-msvc2022:
     runs-on: windows-latest
@@ -19,42 +23,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Push build config to AppVeyor
+        # We push the project YAML via the AppVeyor API before every build because
+        # this project has "ignoreAppveyorYml: true" in its AppVeyor settings, so
+        # AppVeyor ignores the appveyor.yml in the repository root and uses the
+        # configuration stored server-side instead.
+        #
+        # SCRIPTING LANGUAGE CHOICE — PowerShell Core (pwsh):
+        # AppVeyor build_script commands prefixed with "ps:" run in PowerShell.
+        # On Windows images this is Windows PowerShell 5.1; on Linux/macOS images
+        # AppVeyor uses PowerShell Core (pwsh).  Because PowerShell Core is
+        # available on Windows, macOS, and Linux, ALL build script commands in
+        # this project MUST be written as PowerShell and prefixed with "ps:".
+        # Do NOT use cmd.exe batch syntax (no "cd", "mkdir /Y", "set VAR=",
+        # etc.) or Bash syntax here — stick to PowerShell for portability.
+        run: |
+          YAML_CONFIG='image: Visual Studio 2015
+build_script:
+  - ps: cmake -B build -S . -G "Visual Studio 14 2015"
+  - ps: cmake --build build --config Release'
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+            "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings/yaml" \
+            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
+            -H "Content-Type: text/plain" \
+            --data-binary "$YAML_CONFIG")
+
+          echo "PUT settings/yaml response: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "204" ]; then
+            echo "Failed to update AppVeyor project YAML settings (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+
+        env:
+          APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
+
       - name: Trigger AppVeyor build
         run: |
           BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           echo "Using branch: $BRANCH"
 
-          # Discover the correct accountName and projectSlug by matching
-          # this repo's name against the projects registered in AppVeyor.
-          PROJECTS=$(curl -s \
-            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-            -H "Content-Type: application/json" \
-            "https://ci.appveyor.com/api/projects")
-
-          REPO_LOWER=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
-
-          PROJECT=$(echo "$PROJECTS" | jq -r \
-            --arg repo "$REPO_LOWER" \
-            '.[] | select((.repositoryName | ascii_downcase) == $repo)' \
-            | head -n 1)
-
-          if [ -z "$PROJECT" ]; then
-            echo "No AppVeyor project found matching repository: $GITHUB_REPOSITORY"
-            echo "Projects available on this token:"
-            echo "$PROJECTS" | jq -r '.[].repositoryName'
-            exit 1
-          fi
-
-          ACCOUNT_NAME=$(echo "$PROJECT" | jq -r '.accountName')
-          PROJECT_SLUG=$(echo "$PROJECT" | jq -r '.slug')
-          echo "Found AppVeyor project: $ACCOUNT_NAME / $PROJECT_SLUG"
-
           RESPONSE=$(curl -s -X POST https://ci.appveyor.com/api/builds \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{
-              \"accountName\": \"$ACCOUNT_NAME\",
-              \"projectSlug\": \"$PROJECT_SLUG\",
+              \"accountName\": \"$APPVEYOR_ACCOUNT\",
+              \"projectSlug\": \"$APPVEYOR_PROJECT\",
               \"branch\": \"$BRANCH\"
             }")
 
@@ -63,12 +77,10 @@ jobs:
           BUILD_VERSION=$(echo "$RESPONSE" | jq -r '.version')
 
           if [ "$BUILD_VERSION" = "null" ] || [ -z "$BUILD_VERSION" ]; then
-            echo "Failed to get build version from trigger response!"
+            echo "Failed to get build version!"
             exit 1
           fi
 
-          echo "ACCOUNT_NAME=$ACCOUNT_NAME"   >> $GITHUB_ENV
-          echo "PROJECT_SLUG=$PROJECT_SLUG"   >> $GITHUB_ENV
           echo "BUILD_VERSION=$BUILD_VERSION" >> $GITHUB_ENV
 
         env:
@@ -79,7 +91,7 @@ jobs:
           while true; do
             RESPONSE=$(curl -s \
               -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-              "https://ci.appveyor.com/api/projects/$ACCOUNT_NAME/$PROJECT_SLUG/build/$BUILD_VERSION")
+              "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/build/$BUILD_VERSION")
 
             STATUS=$(echo "$RESPONSE" | jq -r '.build.status')
             echo "Status: $STATUS"
