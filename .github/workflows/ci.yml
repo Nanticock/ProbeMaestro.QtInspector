@@ -54,15 +54,19 @@ jobs:
           cat /tmp/appveyor_build.yml
           echo "-------------------------------------"
 
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+          curl -s -w "\n%{http_code}" -X PUT \
             "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings/yaml" \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
             -H "Content-Type: text/plain" \
-            --data-binary "@/tmp/appveyor_build.yml")
+            --data-binary "@/tmp/appveyor_build.yml" \
+            > /tmp/appveyor_put_response.txt
 
-          echo "PUT settings/yaml response: $HTTP_STATUS"
+          HTTP_STATUS=$(tail -n 1 /tmp/appveyor_put_response.txt)
+          RESPONSE_BODY=$(head -n -1 /tmp/appveyor_put_response.txt)
+          echo "PUT settings/yaml response: HTTP $HTTP_STATUS"
+          echo "Response body: $RESPONSE_BODY"
           if [ "$HTTP_STATUS" != "204" ]; then
-            echo "Failed to update AppVeyor project YAML settings (HTTP $HTTP_STATUS)"
+            echo "::error::AppVeyor PUT /settings/yaml failed HTTP $HTTP_STATUS — body: $RESPONSE_BODY"
             exit 1
           fi
 
