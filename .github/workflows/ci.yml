@@ -1,0 +1,62 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build-msvc2022:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (MSVC 2022)
+        run: cmake -B build -S .
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  build-msvc2015-appveyor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger AppVeyor build
+        id: trigger
+        run: |
+          RESPONSE=$(curl -s -X POST https://ci.appveyor.com/api/builds \
+            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "accountName": "MostafaNanticock",
+              "projectSlug": "probemaestro-qtinspector",
+              "branch": "main"
+            }')
+
+          echo "$RESPONSE"
+
+          BUILD_ID=$(echo $RESPONSE | jq -r '.build.buildId')
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+
+        env:
+          APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
+
+      - name: Wait for AppVeyor build
+        run: |
+          while true; do
+            RESPONSE=$(curl -s \
+              -H "Authorization: Bearer $APPVEYOR_TOKEN" \
+              https://ci.appveyor.com/api/builds/$BUILD_ID)
+
+            STATUS=$(echo $RESPONSE | jq -r '.build.status')
+            echo "Status: $STATUS"
+
+            if [ "$STATUS" = "success" ]; then
+              exit 0
+            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "cancelled" ]; then
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+        env:
+          APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
