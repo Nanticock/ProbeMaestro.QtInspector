@@ -58,7 +58,7 @@ jobs:
              .settings')
 
           curl -s -w "\n%{http_code}" -X PUT \
-            "https://ci.appveyor.com/api/projects" \
+            "https://ci.appveyor.com/api/account/$APPVEYOR_ACCOUNT/projects" \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$UPDATED" \
