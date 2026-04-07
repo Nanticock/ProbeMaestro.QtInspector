@@ -38,13 +38,21 @@ jobs:
         # Do NOT use cmd.exe batch syntax (no "cd", "mkdir /Y", "set VAR=",
         # etc.) or Bash syntax here — stick to PowerShell for portability.
         run: |
-          YAML_CONFIG=$(printf 'image: Visual Studio 2015\nbuild_script:\n  - ps: cmake -B build -S . -G "Visual Studio 14 2015"\n  - ps: cmake --build build --config Release')
+          # Write YAML to a temp file to avoid shell quoting issues when
+          # passing the content to curl (double quotes in generator name
+          # would be corrupted by variable expansion in --data-binary "$VAR").
+          cat > /tmp/appveyor_build.yml << 'APPVEYOR_YAML_EOF'
+image: Visual Studio 2015
+build_script:
+  - ps: cmake -B build -S . -G 'Visual Studio 14 2015'
+  - ps: cmake --build build --config Release
+APPVEYOR_YAML_EOF
 
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
             "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings/yaml" \
             -H "Authorization: Bearer $APPVEYOR_TOKEN" \
             -H "Content-Type: text/plain" \
-            --data-binary "$YAML_CONFIG")
+            --data-binary "@/tmp/appveyor_build.yml")
 
           echo "PUT settings/yaml response: $HTTP_STATUS"
           if [ "$HTTP_STATUS" != "204" ]; then
