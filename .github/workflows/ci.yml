@@ -107,6 +107,9 @@ jobs:
 
       - name: Wait for AppVeyor build
         run: |
+          # Print the AppVeyor build URL for manual inspection
+          echo "AppVeyor build: https://ci.appveyor.com/project/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/builds/$(curl -s -H "Authorization: Bearer $APPVEYOR_TOKEN" "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/build/$BUILD_VERSION" | jq -r '.build.buildId')"
+
           while true; do
             RESPONSE=$(curl -s \
               -H "Authorization: Bearer $APPVEYOR_TOKEN" \
@@ -118,6 +121,11 @@ jobs:
             if [ "$STATUS" = "success" ]; then
               exit 0
             elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "cancelled" ]; then
+              BUILD_ID=$(echo "$RESPONSE" | jq -r '.build.buildId')
+              JOB_ID=$(echo "$RESPONSE" | jq -r '.build.jobs[0].jobId')
+              echo "::error::AppVeyor build $BUILD_VERSION ($BUILD_ID) $STATUS — https://ci.appveyor.com/project/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/builds/$BUILD_ID"
+              echo "Fetching build log..."
+              curl -s -H "Authorization: Bearer $APPVEYOR_TOKEN" "https://ci.appveyor.com/api/buildjobs/$JOB_ID/log" | tail -50
               exit 1
             fi
 
