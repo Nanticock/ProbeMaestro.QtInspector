@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -17,6 +18,8 @@ DEFAULT_BASE_URL = "https://ci.appveyor.com"
 SUCCESS_STATUSES = {"success"}
 FAILURE_STATUSES = {"failed", "cancelled"}
 DUPLICATE_BUILD_VERSION_ERROR_FRAGMENT = "already exists"
+BUILD_NUMBER_PATH_PATTERN = re.compile(r"Build version\s+([^\s]+)\s+already exists", re.IGNORECASE)
+TRAILING_INTEGER_PATTERN = re.compile(r"(\d+)$")
 START_BUILD_RETRY_ATTEMPTS = 6
 START_BUILD_RETRY_DELAY_SECONDS = 5
 APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR = "APPVEYOR_BUILD_WORKER_IMAGE"
@@ -183,6 +186,15 @@ class AppVeyorClient:
 
     def get_build_log(self, job_id: str) -> str:
         return self._request("GET", f"/api/buildjobs/{job_id}/log", response_type="text")
+
+    def update_next_build_number(self, project: ProjectRef, next_build_number: int) -> None:
+        self._request(
+            "PUT",
+            f"/api/projects/{project.account_name}/{project.project_slug}/settings/build-number",
+            payload={"nextBuildNumber": next_build_number},
+            expected_statuses=(204,),
+            response_type="none",
+        )
 
     def _request(
         self,
@@ -523,6 +535,8 @@ def start_build_with_retry(
             if attempt >= attempts or not is_duplicate_build_version_error(exc):
                 raise
 
+            ensure_next_build_number_is_unique(client, project, exc)
+
             delay_seconds = max(retry_delay_seconds, 1) * attempt
             print(
                 "AppVeyor rejected a duplicate build version while starting the build; "
@@ -535,6 +549,40 @@ def start_build_with_retry(
 
 def is_duplicate_build_version_error(exc: AppVeyorError) -> bool:
     return DUPLICATE_BUILD_VERSION_ERROR_FRAGMENT in str(exc).lower()
+
+
+def ensure_next_build_number_is_unique(
+    client: AppVeyorClient,
+    project: ProjectRef,
+    exc: AppVeyorError,
+) -> None:
+    duplicate_version = extract_duplicate_build_version(str(exc))
+    if not duplicate_version:
+        return
+
+    next_build_number = derive_next_build_number(duplicate_version)
+    if next_build_number is None:
+        return
+
+    client.update_next_build_number(project, next_build_number)
+    print(
+        "Advanced AppVeyor next build number to "
+        f"{next_build_number} after duplicate version {duplicate_version}."
+    )
+
+
+def extract_duplicate_build_version(message: str) -> str | None:
+    match = BUILD_NUMBER_PATH_PATTERN.search(message)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def derive_next_build_number(build_version: str) -> int | None:
+    match = TRAILING_INTEGER_PATTERN.search(build_version)
+    if not match:
+        return None
+    return int(match.group(1)) + 1
 
 
 def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
