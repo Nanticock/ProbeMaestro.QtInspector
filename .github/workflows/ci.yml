@@ -319,7 +319,13 @@ jobs:
           sudo apt-get update
 
           if [ '${{ matrix.compiler }}' = 'gcc' ]; then
-            sudo apt-get install -y gcc-${{ matrix.compiler_version }}
+            packages=(gcc-${{ matrix.compiler_version }})
+
+            if [ '${{ matrix.architecture }}' = 'x86' ]; then
+              packages+=(gcc-${{ matrix.compiler_version }}-multilib)
+            fi
+
+            sudo apt-get install -y "${packages[@]}"
             echo "CC=gcc-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
           elif [ '${{ matrix.compiler }}' = 'clang' ]; then
             sudo apt-get install -y clang-${{ matrix.compiler_version }}
@@ -330,7 +336,9 @@ jobs:
           fi
 
           if [ '${{ matrix.architecture }}' = 'x86' ]; then
-            sudo apt-get install -y gcc-multilib libc6-dev-i386
+            if [ '${{ matrix.compiler }}' = 'clang' ]; then
+              sudo apt-get install -y gcc-multilib libc6-dev-i386
+            fi
             echo "CFLAGS=-m32" >> "$GITHUB_ENV"
             echo "LDFLAGS=-m32" >> "$GITHUB_ENV"
           fi

@@ -496,7 +496,6 @@ def parse_environment_variables(items: Iterable[str]) -> dict[str, str] | None:
 
 def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
     worker_cmd = [
-        "python",
         ".github/scripts/appveyor_cli.py",
         "run-worker-cmake-build",
         "--source-dir",
@@ -513,9 +512,22 @@ def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
     for build_arg in args.build_arg:
         worker_cmd.extend(["--build-arg", build_arg])
 
+    worker_args_lines = ["$workerArgs = @("]
+    worker_args_lines.extend(f"  {quote_powershell_argument(part)}" for part in worker_cmd)
+    worker_args_lines.append(")")
+
     script_lines = [
         "$ErrorActionPreference = 'Stop'",
-        join_powershell_command(worker_cmd),
+        "$pythonCommand = $null",
+        "foreach ($candidate in @('python', 'python3', 'py')) {",
+        "  if (Get-Command $candidate -ErrorAction SilentlyContinue) {",
+        "    $pythonCommand = $candidate",
+        "    break",
+        "  }",
+        "}",
+        "if (-not $pythonCommand) { throw 'No Python interpreter was found on the AppVeyor build worker.' }",
+        *worker_args_lines,
+        "& $pythonCommand @workerArgs",
         "if ($LastExitCode -ne 0) { exit $LastExitCode }",
     ]
     return [BuildScript(language="pwsh", script="\n".join(script_lines))]
