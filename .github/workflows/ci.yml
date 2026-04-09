@@ -2,34 +2,70 @@ name: CI
 
 on: [push, pull_request]
 
+# FIXME: should be moved to repo variables
 env:
   APPVEYOR_ACCOUNT: MostafaNanticock
   APPVEYOR_PROJECT: probemaestro-qtinspector
 
 jobs:
-  build-msvc2022:
-    runs-on: windows-latest
+  build-windows:
+    name: Windows ${{ matrix.compiler }} ${{ matrix.compiler_version }} ${{ matrix.architecture }} via ${{ matrix.provider }}
+    runs-on: ${{ matrix.runs_on }}
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure (MSVC 2022)
-        run: cmake -B build -S .
-
-      - name: Build
-        run: cmake --build build --config Release
-
-  build-msvc2015-appveyor:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - provider: github-actions
+            runs_on: windows-latest
+            compiler: msvc
+            compiler_version: '2022'
+            architecture: x64
+          - provider: appveyor
+            runs_on: ubuntu-latest
+            compiler: msvc
+            compiler_version: '2019'
+            architecture: x64
+          - provider: appveyor
+            runs_on: ubuntu-latest
+            compiler: msvc
+            compiler_version: '2017'
+            architecture: x64
+          - provider: appveyor
+            runs_on: ubuntu-latest
+            compiler: msvc
+            compiler_version: '2015'
+            architecture: x64
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
+        if: matrix.provider == 'appveyor'
         with:
           python-version: '3.x'
 
-      - name: Run AppVeyor MSVC 2015 build
-        run: python .github/scripts/appveyor_cli.py run-cmake-build --generator "Visual Studio 14 2015"
+      - name: Configure native Windows build
+        if: matrix.provider == 'github-actions'
+        shell: pwsh
+        run: |
+          if ('${{ matrix.compiler }}' -ne 'msvc' -or '${{ matrix.compiler_version }}' -ne '2022') {
+            throw 'Unsupported native GitHub Actions compiler target.'
+          }
+
+          $cmakeArch = if ('${{ matrix.architecture }}' -eq 'x86') { 'Win32' } else { '${{ matrix.architecture }}' }
+          cmake -B build -S . -G 'Visual Studio 17 2022' -A $cmakeArch
+
+      - name: Build native Windows target
+        if: matrix.provider == 'github-actions'
+        run: cmake --build build --config Release
+
+      - name: Run AppVeyor Windows target
+        if: matrix.provider == 'appveyor'
+        run: >-
+          python .github/scripts/appveyor_cli.py run-cmake-build
+          --compiler ${{ matrix.compiler }}
+          --compiler-version ${{ matrix.compiler_version }}
+          --architecture ${{ matrix.architecture }}
         env:
           APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}

@@ -15,6 +15,12 @@ from urllib import error, request
 DEFAULT_BASE_URL = "https://ci.appveyor.com"
 SUCCESS_STATUSES = {"success"}
 FAILURE_STATUSES = {"failed", "cancelled"}
+MSVC_GENERATORS = {
+    "2015": "Visual Studio 14 2015",
+    "2017": "Visual Studio 15 2017",
+    "2019": "Visual Studio 16 2019",
+    "2022": "Visual Studio 17 2022",
+}
 
 
 class AppVeyorError(RuntimeError):
@@ -34,6 +40,20 @@ class BuildScript:
 
     def as_payload(self) -> dict[str, str]:
         return {"language": self.language, "script": self.script}
+
+
+@dataclass(frozen=True)
+class CompilerSpec:
+    compiler: str
+    version: str
+    architecture: str
+
+
+@dataclass(frozen=True)
+class AppVeyorBuildConfiguration:
+    generator: str
+    configure_args: tuple[str, ...] = ()
+    environment_variables: dict[str, str] | None = None
 
 
 class AppVeyorClient:
@@ -182,7 +202,23 @@ def build_parser() -> argparse.ArgumentParser:
     cmake.add_argument("--source-dir", default=".", help="Source directory for cmake -S.")
     cmake.add_argument("--build-dir", default="build", help="Build directory for cmake -B.")
     cmake.add_argument("--config", default="Release", help="Build configuration passed to cmake --build.")
-    cmake.add_argument("--generator", required=True, help="CMake generator passed to cmake -G.")
+    cmake.add_argument(
+        "--generator",
+        help="Explicit CMake generator passed to cmake -G. Prefer --compiler, --compiler-version, and --architecture.",
+    )
+    cmake.add_argument(
+        "--compiler",
+        help="Compiler family for the build target, such as msvc, gcc, or clang.",
+    )
+    cmake.add_argument(
+        "--compiler-version",
+        help="Compiler version for the build target, such as 2022, 2019, 15, or 14.",
+    )
+    cmake.add_argument(
+        "--architecture",
+        default="x64",
+        help="Target architecture such as x86 or x64. Defaults to x64.",
+    )
     cmake.add_argument(
         "--configure-arg",
         action="append",
@@ -386,6 +422,7 @@ def parse_environment_variables(items: Iterable[str]) -> dict[str, str] | None:
 
 
 def create_cmake_build_scripts(args: argparse.Namespace) -> list[BuildScript]:
+    build_config = resolve_appveyor_build_configuration(args)
     configure_cmd = join_powershell_command(
         [
             "cmake",
@@ -394,7 +431,8 @@ def create_cmake_build_scripts(args: argparse.Namespace) -> list[BuildScript]:
             "-S",
             args.source_dir,
             "-G",
-            args.generator,
+            build_config.generator,
+            *build_config.configure_args,
             *args.configure_arg,
         ]
     )
@@ -409,6 +447,79 @@ def create_cmake_build_scripts(args: argparse.Namespace) -> list[BuildScript]:
         ]
     )
     return [BuildScript(language="ps", script=configure_cmd), BuildScript(language="ps", script=build_cmd)]
+
+
+def resolve_appveyor_build_configuration(args: argparse.Namespace) -> AppVeyorBuildConfiguration:
+    if args.generator:
+        return AppVeyorBuildConfiguration(generator=args.generator)
+
+    spec = resolve_compiler_spec(args)
+    if spec.compiler == "msvc":
+        return resolve_msvc_appveyor_build_configuration(spec)
+
+    raise AppVeyorError(
+        "Unsupported AppVeyor compiler configuration "
+        f"'{spec.compiler} {spec.version} {spec.architecture}'. Pass --generator explicitly or extend the mapping."
+    )
+
+
+def resolve_compiler_spec(args: argparse.Namespace) -> CompilerSpec:
+    compiler = normalize_required_option(args.compiler, "--compiler")
+    version = normalize_required_option(args.compiler_version, "--compiler-version")
+    architecture = normalize_required_option(args.architecture, "--architecture")
+    return CompilerSpec(compiler=compiler, version=version, architecture=architecture)
+
+
+def normalize_required_option(value: str | None, option_name: str) -> str:
+    normalized = normalize_token(value)
+    if normalized:
+        return normalized
+    raise AppVeyorError(f"Missing required option {option_name}.")
+
+
+def normalize_token(value: str | None) -> str:
+    return str(value or "").strip().lower()
+
+
+def resolve_msvc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
+    generator_version = normalize_msvc_version(spec.version)
+    generator = MSVC_GENERATORS.get(generator_version)
+    if generator is None:
+        supported = ", ".join(sorted(MSVC_GENERATORS))
+        raise AppVeyorError(f"Unsupported MSVC version '{spec.version}'. Supported versions: {supported}.")
+
+    architecture = normalize_msvc_architecture(spec.architecture)
+    configure_args = ("-A", architecture)
+    return AppVeyorBuildConfiguration(generator=generator, configure_args=configure_args)
+
+
+def normalize_msvc_version(version: str) -> str:
+    aliases = {
+        "14": "2015",
+        "14.0": "2015",
+        "15": "2017",
+        "15.0": "2017",
+        "16": "2019",
+        "16.0": "2019",
+        "17": "2022",
+        "17.0": "2022",
+    }
+    return aliases.get(version, version)
+
+
+def normalize_msvc_architecture(architecture: str) -> str:
+    aliases = {
+        "x86": "Win32",
+        "win32": "Win32",
+        "x64": "x64",
+        "amd64": "x64",
+    }
+    normalized = aliases.get(architecture)
+    if normalized:
+        return normalized
+    raise AppVeyorError(
+        f"Unsupported MSVC architecture '{architecture}'. Supported architectures: x86, x64."
+    )
 
 
 def join_powershell_command(parts: Sequence[str]) -> str:
