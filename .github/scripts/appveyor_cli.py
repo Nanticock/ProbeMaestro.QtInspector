@@ -6,12 +6,18 @@ import argparse
 import json
 import os
 import re
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 from urllib import error, request
+
+from appveyor_cmake_support import (
+    AppVeyorCMakeError,
+    build_request_environment_variables,
+    resolve_appveyor_build_configuration,
+    resolve_compiler_spec,
+)
 
 
 DEFAULT_BASE_URL = "https://ci.appveyor.com"
@@ -22,59 +28,6 @@ BUILD_NUMBER_PATH_PATTERN = re.compile(r"Build version\s+([^\s]+)\s+already exis
 TRAILING_INTEGER_PATTERN = re.compile(r"(\d+)$")
 START_BUILD_RETRY_ATTEMPTS = 6
 START_BUILD_RETRY_DELAY_SECONDS = 5
-APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR = "APPVEYOR_BUILD_WORKER_IMAGE"
-TARGET_OS_ENV_VAR = "PM_CI_OS"
-COMPILER_ENV_VAR = "PM_CI_COMPILER"
-COMPILER_VERSION_ENV_VAR = "PM_CI_COMPILER_VERSION"
-ARCHITECTURE_ENV_VAR = "PM_CI_ARCHITECTURE"
-MSVC_GENERATORS = {
-    "2015": "Visual Studio 14 2015",
-    "2017": "Visual Studio 15 2017",
-    "2019": "Visual Studio 16 2019",
-    "2022": "Visual Studio 17 2022",
-}
-WINDOWS_MSVC_IMAGES = {
-    "2015": "Visual Studio 2015",
-    "2017": "Visual Studio 2017",
-    "2019": "Visual Studio 2019",
-    "2022": "Visual Studio 2022",
-}
-LINUX_GCC_IMAGES = {
-    "7": "Ubuntu",
-    "8": "Ubuntu",
-    "9": "Ubuntu2004",
-    "10": "Ubuntu2204",
-    "11": "Ubuntu2204",
-    "12": "Ubuntu2204",
-    "13": "Ubuntu2204",
-}
-LINUX_CLANG_IMAGES = {
-    "9": "Ubuntu",
-    "10": "Ubuntu",
-    "11": "Ubuntu",
-    "12": "Ubuntu2004",
-    "13": "Ubuntu2004",
-    "14": "Ubuntu2204",
-    "15": "Ubuntu2204",
-    "16": "Ubuntu2204",
-    "17": "Ubuntu2204",
-    "18": "Ubuntu2204",
-    "19": "Ubuntu2204",
-    "20": "Ubuntu2204",
-}
-MACOS_GCC_IMAGES = {
-    "10": "macos-monterey",
-    "11": "macos-ventura",
-    "12": "macos-sonoma",
-    "13": "macos-sonoma",
-    "14": "macos-sonoma",
-    "15": "macos-sonoma",
-}
-MACOS_CLANG_IMAGES = {
-    "13": "macos-monterey",
-    "14": "macos-ventura",
-    "15": "macos-sonoma",
-}
 
 
 class AppVeyorError(RuntimeError):
@@ -94,23 +47,6 @@ class BuildScript:
 
     def as_payload(self) -> dict[str, str]:
         return {"language": self.language, "script": self.script}
-
-
-@dataclass(frozen=True)
-class CompilerSpec:
-    os_name: str
-    compiler: str
-    version: str
-    architecture: str
-
-
-@dataclass(frozen=True)
-class AppVeyorBuildConfiguration:
-    image: str
-    generator: str
-    configure_args: tuple[str, ...] = ()
-    environment_variables: dict[str, str] | None = None
-
 
 class AppVeyorClient:
     def __init__(self, token: str, account_name: str, base_url: str = DEFAULT_BASE_URL) -> None:
@@ -376,13 +312,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_cmd.set_defaults(handler=handle_run_cmake_build)
 
-    worker_cmd = subparsers.add_parser(
-        "run-worker-cmake-build",
-        parents=[cmake],
-        help="Run the normalized CMake build on the current machine. Intended for AppVeyor build workers.",
-    )
-    worker_cmd.set_defaults(handler=handle_run_worker_cmake_build)
-
     return parser
 
 
@@ -470,15 +399,6 @@ def handle_run_cmake_build(args: argparse.Namespace) -> int:
         log_lines=max(args.log_lines, 1),
     )
     return 0
-
-
-def handle_run_worker_cmake_build(args: argparse.Namespace) -> int:
-    spec = resolve_compiler_spec(args, allow_env=True)
-    build_config = resolve_appveyor_build_configuration(spec, generator_override=args.generator)
-    run_local_cmake_build(args, build_config)
-    return 0
-
-
 def build_client(args: argparse.Namespace, project: ProjectRef) -> AppVeyorClient:
     token = require_value(args.token or os.getenv("APPVEYOR_TOKEN"), "APPVEYOR_TOKEN", "AppVeyor token")
     return AppVeyorClient(token=token, account_name=project.account_name, base_url=args.base_url)
@@ -587,8 +507,7 @@ def derive_next_build_number(build_version: str) -> int | None:
 
 def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
     worker_cmd = [
-        ".github/scripts/appveyor_cli.py",
-        "run-worker-cmake-build",
+        ".github/scripts/appveyor_worker.py",
         "--source-dir",
         args.source_dir,
         "--build-dir",
@@ -622,242 +541,6 @@ def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
         "if ($LastExitCode -ne 0) { exit $LastExitCode }",
     ]
     return [BuildScript(language="pwsh", script="\n".join(script_lines))]
-
-
-def build_request_environment_variables(
-    spec: CompilerSpec,
-    build_config: AppVeyorBuildConfiguration,
-    extra_variables: dict[str, str] | None,
-) -> dict[str, str]:
-    environment = dict(extra_variables or {})
-    environment[APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR] = build_config.image
-    environment[TARGET_OS_ENV_VAR] = spec.os_name
-    environment[COMPILER_ENV_VAR] = spec.compiler
-    environment[COMPILER_VERSION_ENV_VAR] = spec.version
-    environment[ARCHITECTURE_ENV_VAR] = spec.architecture
-    return environment
-
-
-def resolve_appveyor_build_configuration(
-    spec: CompilerSpec,
-    *,
-    generator_override: str | None = None,
-) -> AppVeyorBuildConfiguration:
-    if spec.os_name == "windows" and spec.compiler == "msvc":
-        build_config = resolve_msvc_appveyor_build_configuration(spec)
-    elif spec.os_name == "linux" and spec.compiler == "gcc":
-        build_config = resolve_linux_gcc_appveyor_build_configuration(spec)
-    elif spec.os_name == "linux" and spec.compiler == "clang":
-        build_config = resolve_linux_clang_appveyor_build_configuration(spec)
-    elif spec.os_name == "macos" and spec.compiler == "gcc":
-        build_config = resolve_macos_gcc_appveyor_build_configuration(spec)
-    elif spec.os_name == "macos" and spec.compiler == "clang":
-        build_config = resolve_macos_clang_appveyor_build_configuration(spec)
-    else:
-        raise AppVeyorError(
-            "Unsupported AppVeyor compiler configuration "
-            f"'{spec.os_name} {spec.compiler} {spec.version} {spec.architecture}'."
-        )
-
-    if not generator_override:
-        return build_config
-
-    return AppVeyorBuildConfiguration(
-        image=build_config.image,
-        generator=generator_override,
-        configure_args=build_config.configure_args,
-        environment_variables=build_config.environment_variables,
-    )
-
-
-def resolve_compiler_spec(args: argparse.Namespace, *, allow_env: bool) -> CompilerSpec:
-    os_name = normalize_os_name(
-        normalize_required_option(
-            args.os if args.os else (os.getenv(TARGET_OS_ENV_VAR) if allow_env else None),
-            "--os",
-        )
-    )
-    compiler = normalize_required_option(
-        args.compiler if args.compiler else (os.getenv(COMPILER_ENV_VAR) if allow_env else None),
-        "--compiler",
-    )
-    version = normalize_required_option(
-        args.compiler_version if args.compiler_version else (os.getenv(COMPILER_VERSION_ENV_VAR) if allow_env else None),
-        "--compiler-version",
-    )
-    architecture = normalize_required_option(
-        args.architecture if args.architecture else (os.getenv(ARCHITECTURE_ENV_VAR) if allow_env else None),
-        "--architecture",
-    )
-    return CompilerSpec(os_name=os_name, compiler=compiler, version=version, architecture=architecture)
-
-
-def normalize_required_option(value: str | None, option_name: str) -> str:
-    normalized = normalize_token(value)
-    if normalized:
-        return normalized
-    raise AppVeyorError(f"Missing required option {option_name}.")
-
-
-def normalize_token(value: str | None) -> str:
-    return str(value or "").strip().lower()
-
-
-def normalize_os_name(os_name: str) -> str:
-    aliases = {
-        "darwin": "macos",
-        "linux": "linux",
-        "mac": "macos",
-        "macos": "macos",
-        "osx": "macos",
-        "ubuntu": "linux",
-        "win": "windows",
-        "windows": "windows",
-    }
-    normalized = aliases.get(os_name)
-    if normalized:
-        return normalized
-    raise AppVeyorError(f"Unsupported build OS '{os_name}'. Supported values: windows, linux, macos.")
-
-
-def resolve_msvc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    generator_version = normalize_msvc_version(spec.version)
-    generator = MSVC_GENERATORS.get(generator_version)
-    if generator is None:
-        supported = ", ".join(sorted(MSVC_GENERATORS))
-        raise AppVeyorError(f"Unsupported MSVC version '{spec.version}'. Supported versions: {supported}.")
-
-    architecture = normalize_msvc_architecture(spec.architecture)
-    configure_args = ("-A", architecture)
-    image = WINDOWS_MSVC_IMAGES[generator_version]
-    return AppVeyorBuildConfiguration(image=image, generator=generator, configure_args=configure_args)
-
-
-def resolve_linux_gcc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, LINUX_GCC_IMAGES, "GCC")
-    architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
-    if architecture != "x64":
-        raise AppVeyorError("AppVeyor Linux GCC builds currently support x64 only.")
-    return AppVeyorBuildConfiguration(
-        image=image,
-        generator="",
-        environment_variables={"CC": f"gcc-{spec.version}", "CXX": f"g++-{spec.version}"},
-    )
-
-
-def resolve_linux_clang_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, LINUX_CLANG_IMAGES, "Clang")
-    architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
-    if architecture != "x64":
-        raise AppVeyorError("AppVeyor Linux Clang builds currently support x64 only.")
-    return AppVeyorBuildConfiguration(
-        image=image,
-        generator="",
-        environment_variables={"CC": f"clang-{spec.version}", "CXX": f"clang++-{spec.version}"},
-    )
-
-
-def resolve_macos_gcc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, MACOS_GCC_IMAGES, "macOS GCC")
-    architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
-    if architecture != "x64":
-        raise AppVeyorError("AppVeyor macOS GCC builds currently support x64 only.")
-    return AppVeyorBuildConfiguration(
-        image=image,
-        generator="",
-        environment_variables={"CC": f"gcc-{spec.version}", "CXX": f"g++-{spec.version}"},
-    )
-
-
-def resolve_macos_clang_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, MACOS_CLANG_IMAGES, "macOS Clang")
-    architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
-    if architecture != "x64":
-        raise AppVeyorError("AppVeyor macOS Clang builds currently support x64 only.")
-    return AppVeyorBuildConfiguration(
-        image=image,
-        generator="",
-        environment_variables={"CC": "clang", "CXX": "clang++"},
-    )
-
-
-def resolve_image(version: str, supported_images: dict[str, str], label: str) -> str:
-    image = supported_images.get(version)
-    if image:
-        return image
-    supported = ", ".join(sorted(supported_images))
-    raise AppVeyorError(f"Unsupported {label} version '{version}'. Supported versions: {supported}.")
-
-
-def normalize_msvc_version(version: str) -> str:
-    aliases = {
-        "14": "2015",
-        "14.0": "2015",
-        "15": "2017",
-        "15.0": "2017",
-        "16": "2019",
-        "16.0": "2019",
-        "17": "2022",
-        "17.0": "2022",
-    }
-    return aliases.get(version, version)
-
-
-def normalize_msvc_architecture(architecture: str) -> str:
-    aliases = {
-        "x86": "Win32",
-        "win32": "Win32",
-        "x64": "x64",
-        "amd64": "x64",
-        "arm64": "ARM64",
-    }
-    normalized = aliases.get(architecture)
-    if normalized:
-        return normalized
-    raise AppVeyorError(
-        f"Unsupported MSVC architecture '{architecture}'. Supported architectures: x86, x64, arm64."
-    )
-
-
-def normalize_unix_appveyor_architecture(architecture: str, os_name: str, compiler: str) -> str:
-    aliases = {
-        "x64": "x64",
-        "amd64": "x64",
-    }
-    normalized = aliases.get(architecture)
-    if normalized:
-        return normalized
-    raise AppVeyorError(
-        f"Unsupported {os_name} {compiler} architecture '{architecture}'. Supported architectures: x64."
-    )
-
-
-def run_local_cmake_build(args: argparse.Namespace, build_config: AppVeyorBuildConfiguration) -> None:
-    environment = os.environ.copy()
-    if build_config.environment_variables:
-        environment.update(build_config.environment_variables)
-
-    configure_cmd = ["cmake", "-B", args.build_dir, "-S", args.source_dir]
-    if build_config.generator:
-        configure_cmd.extend(["-G", build_config.generator])
-    configure_cmd.extend(build_config.configure_args)
-    configure_cmd.extend(args.configure_arg)
-
-    build_cmd = ["cmake", "--build", args.build_dir, "--config", args.config, *args.build_arg]
-
-    run_command(configure_cmd, environment)
-    run_command(build_cmd, environment)
-
-
-def run_command(command: Sequence[str], environment: dict[str, str]) -> None:
-    print(f"Running: {format_command(command)}")
-    try:
-        subprocess.run(command, env=environment, check=True)
-    except FileNotFoundError as exc:
-        raise AppVeyorError(f"Command not found: {command[0]}") from exc
-    except subprocess.CalledProcessError as exc:
-        raise AppVeyorError(f"Command failed with exit code {exc.returncode}: {format_command(command)}") from exc
-
 
 def format_command(command: Sequence[str]) -> str:
     return " ".join(quote_powershell_argument(part) for part in command)
@@ -948,7 +631,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         return int(handler(args))
-    except AppVeyorError as exc:
+    except (AppVeyorError, AppVeyorCMakeError) as exc:
         print(f"::error::{exc}")
         return 1
 
