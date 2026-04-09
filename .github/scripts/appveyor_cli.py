@@ -513,7 +513,7 @@ def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
         worker_cmd.extend(["--build-arg", build_arg])
 
     worker_args_lines = ["$workerArgs = @("]
-    worker_args_lines.extend(f"  {quote_powershell_argument(part)}" for part in worker_cmd)
+    worker_args_lines.extend(f"  {quote_powershell_string_literal(part)}" for part in worker_cmd)
     worker_args_lines.append(")")
 
     script_lines = [
@@ -783,6 +783,12 @@ def quote_powershell_argument(value: str) -> str:
     if any(char.isspace() for char in value) or any(char in value for char in '"`'):
         return f'"{escaped}"'
     return escaped
+
+
+def quote_powershell_string_literal(value: str) -> str:
+    if value == "":
+        return "''"
+    return "'" + value.replace("'", "''") + "'"
 
 
 def wait_for_build(
