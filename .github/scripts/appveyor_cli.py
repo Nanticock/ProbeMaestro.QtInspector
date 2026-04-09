@@ -16,6 +16,9 @@ from urllib import error, request
 DEFAULT_BASE_URL = "https://ci.appveyor.com"
 SUCCESS_STATUSES = {"success"}
 FAILURE_STATUSES = {"failed", "cancelled"}
+DUPLICATE_BUILD_VERSION_ERROR_FRAGMENT = "already exists"
+START_BUILD_RETRY_ATTEMPTS = 6
+START_BUILD_RETRY_DELAY_SECONDS = 5
 APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR = "APPVEYOR_BUILD_WORKER_IMAGE"
 TARGET_OS_ENV_VAR = "PM_CI_OS"
 COMPILER_ENV_VAR = "PM_CI_COMPILER"
@@ -387,7 +390,8 @@ def handle_start_build(args: argparse.Namespace) -> int:
     project = resolve_project(args)
     client = build_client(args, project)
     branch = None if args.pull_request_id else resolve_branch(args.branch)
-    response = client.start_build(
+    response = start_build_with_retry(
+        client,
         project,
         branch=branch,
         commit_id=args.commit_id,
@@ -428,7 +432,8 @@ def handle_run_cmake_build(args: argparse.Namespace) -> int:
         print(f"Previous buildMode: {previous_mode}")
 
     branch = None if args.pull_request_id else resolve_branch(args.branch)
-    response = client.start_build(
+    response = start_build_with_retry(
+        client,
         project,
         branch=branch,
         commit_id=args.commit_id,
@@ -492,6 +497,44 @@ def parse_environment_variables(items: Iterable[str]) -> dict[str, str] | None:
             raise AppVeyorError(f"Invalid environment variable '{item}'. Expected NAME=VALUE.")
         environment[name] = value
     return environment or None
+
+
+def start_build_with_retry(
+    client: AppVeyorClient,
+    project: ProjectRef,
+    *,
+    branch: str | None = None,
+    commit_id: str | None = None,
+    pull_request_id: str | None = None,
+    environment_variables: dict[str, str] | None = None,
+    attempts: int = START_BUILD_RETRY_ATTEMPTS,
+    retry_delay_seconds: int = START_BUILD_RETRY_DELAY_SECONDS,
+) -> dict[str, Any]:
+    for attempt in range(1, max(attempts, 1) + 1):
+        try:
+            return client.start_build(
+                project,
+                branch=branch,
+                commit_id=commit_id,
+                pull_request_id=pull_request_id,
+                environment_variables=environment_variables,
+            )
+        except AppVeyorError as exc:
+            if attempt >= attempts or not is_duplicate_build_version_error(exc):
+                raise
+
+            delay_seconds = max(retry_delay_seconds, 1) * attempt
+            print(
+                "AppVeyor rejected a duplicate build version while starting the build; "
+                f"retrying in {delay_seconds} seconds (attempt {attempt + 1} of {attempts})."
+            )
+            time.sleep(delay_seconds)
+
+    raise AppVeyorError("AppVeyor build start retry loop exited unexpectedly.")
+
+
+def is_duplicate_build_version_error(exc: AppVeyorError) -> bool:
+    return DUPLICATE_BUILD_VERSION_ERROR_FRAGMENT in str(exc).lower()
 
 
 def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
