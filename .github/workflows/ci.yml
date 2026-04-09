@@ -8,62 +8,477 @@ env:
   APPVEYOR_PROJECT: probemaestro-qtinspector
 
 jobs:
-  build-windows:
-    name: Windows ${{ matrix.compiler }} ${{ matrix.compiler_version }} ${{ matrix.architecture }} via ${{ matrix.provider }}
+  build-native:
+    name: Native ${{ matrix.os }} ${{ matrix.compiler }} ${{ matrix.compiler_version }} ${{ matrix.architecture }} on ${{ matrix.host_arch }}
     runs-on: ${{ matrix.runs_on }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - provider: github-actions
-            runs_on: windows-latest
+          - os: windows
+            runs_on: windows-2022
+            host_arch: x64
+            compiler: msvc
+            compiler_version: '2022'
+            architecture: x86
+          - os: windows
+            runs_on: windows-2022
+            host_arch: x64
             compiler: msvc
             compiler_version: '2022'
             architecture: x64
-          - provider: appveyor
-            runs_on: ubuntu-latest
+          - os: windows
+            runs_on: windows-11-arm
+            host_arch: arm64
             compiler: msvc
-            compiler_version: '2019'
+            compiler_version: '2022'
+            architecture: arm64
+
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '10'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '10'
             architecture: x64
-          - provider: appveyor
-            runs_on: ubuntu-latest
-            compiler: msvc
-            compiler_version: '2017'
+          - os: linux
+            runs_on: ubuntu-22.04-arm
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '10'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '11'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '11'
             architecture: x64
-          - provider: appveyor
-            runs_on: ubuntu-latest
-            compiler: msvc
-            compiler_version: '2015'
+          - os: linux
+            runs_on: ubuntu-22.04-arm
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '11'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '12'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '12'
             architecture: x64
+          - os: linux
+            runs_on: ubuntu-24.04-arm
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '12'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '13'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '13'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-24.04-arm
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '13'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '14'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '14'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-24.04-arm
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '14'
+            architecture: arm64
+
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '13'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '13'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-22.04-arm
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '13'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '14'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '14'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-22.04-arm
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '14'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '15'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-22.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '15'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-22.04-arm
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '15'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '16'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '16'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-24.04-arm
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '16'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '17'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '17'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-24.04-arm
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '17'
+            architecture: arm64
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '18'
+            architecture: x86
+          - os: linux
+            runs_on: ubuntu-24.04
+            host_arch: x64
+            compiler: clang
+            compiler_version: '18'
+            architecture: x64
+          - os: linux
+            runs_on: ubuntu-24.04-arm
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '18'
+            architecture: arm64
+
+          - os: macos
+            runs_on: macos-14-intel
+            host_arch: x64
+            compiler: clang
+            compiler_version: '15'
+            architecture: x64
+          - os: macos
+            runs_on: macos-14
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '15'
+            architecture: arm64
+          - os: macos
+            runs_on: macos-15-intel
+            host_arch: x64
+            compiler: clang
+            compiler_version: '17'
+            architecture: x64
+          - os: macos
+            runs_on: macos-15
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '17'
+            architecture: arm64
+          - os: macos
+            runs_on: macos-15-intel
+            host_arch: x64
+            compiler: clang
+            compiler_version: '18'
+            architecture: x64
+          - os: macos
+            runs_on: macos-15
+            host_arch: arm64
+            compiler: clang
+            compiler_version: '18'
+            architecture: arm64
+          - os: macos
+            runs_on: macos-15-intel
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '13'
+            architecture: x64
+          - os: macos
+            runs_on: macos-15
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '13'
+            architecture: arm64
+          - os: macos
+            runs_on: macos-15-intel
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '14'
+            architecture: x64
+          - os: macos
+            runs_on: macos-15
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '14'
+            architecture: arm64
+          - os: macos
+            runs_on: macos-15-intel
+            host_arch: x64
+            compiler: gcc
+            compiler_version: '15'
+            architecture: x64
+          - os: macos
+            runs_on: macos-15
+            host_arch: arm64
+            compiler: gcc
+            compiler_version: '15'
+            architecture: arm64
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        if: matrix.provider == 'appveyor'
-        with:
-          python-version: '3.x'
+      - name: Install Linux toolchain
+        if: matrix.os == 'linux'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+
+          if [ '${{ matrix.compiler }}' = 'gcc' ]; then
+            sudo apt-get install -y gcc-${{ matrix.compiler_version }}
+            echo "CC=gcc-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+          elif [ '${{ matrix.compiler }}' = 'clang' ]; then
+            sudo apt-get install -y clang-${{ matrix.compiler_version }}
+            echo "CC=clang-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+          else
+            echo "Unsupported Linux compiler: ${{ matrix.compiler }}" >&2
+            exit 1
+          fi
+
+          if [ '${{ matrix.architecture }}' = 'x86' ]; then
+            sudo apt-get install -y gcc-multilib libc6-dev-i386
+            echo "CFLAGS=-m32" >> "$GITHUB_ENV"
+            echo "LDFLAGS=-m32" >> "$GITHUB_ENV"
+          fi
+
+      - name: Select macOS toolchain
+        if: matrix.os == 'macos'
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          if [ '${{ matrix.compiler }}' = 'gcc' ]; then
+            echo "CC=gcc-${{ matrix.compiler_version }}" >> "$GITHUB_ENV"
+          elif [ '${{ matrix.compiler }}' = 'clang' ] && [ '${{ matrix.compiler_version }}' = '18' ]; then
+            echo "CC=$(brew --prefix llvm@18)/bin/clang" >> "$GITHUB_ENV"
+          elif [ '${{ matrix.compiler }}' = 'clang' ]; then
+            echo "CC=$(xcrun --find clang)" >> "$GITHUB_ENV"
+          else
+            echo "Unsupported macOS compiler: ${{ matrix.compiler }}" >&2
+            exit 1
+          fi
+
+      - name: Configure native Unix build
+        if: matrix.os != 'windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -B build -S . -G Ninja -DCMAKE_C_COMPILER="$CC"
+
+      - name: Build native Unix target
+        if: matrix.os != 'windows'
+        shell: bash
+        run: cmake --build build
 
       - name: Configure native Windows build
-        if: matrix.provider == 'github-actions'
+        if: matrix.os == 'windows'
         shell: pwsh
         run: |
           if ('${{ matrix.compiler }}' -ne 'msvc' -or '${{ matrix.compiler_version }}' -ne '2022') {
             throw 'Unsupported native GitHub Actions compiler target.'
           }
 
-          $cmakeArch = if ('${{ matrix.architecture }}' -eq 'x86') { 'Win32' } else { '${{ matrix.architecture }}' }
+          $cmakeArch = switch ('${{ matrix.architecture }}') {
+            'x86' { 'Win32' }
+            'x64' { 'x64' }
+            'arm64' { 'ARM64' }
+            default { throw "Unsupported Windows architecture: ${{ matrix.architecture }}" }
+          }
+
           cmake -B build -S . -G 'Visual Studio 17 2022' -A $cmakeArch
 
       - name: Build native Windows target
-        if: matrix.provider == 'github-actions'
+        if: matrix.os == 'windows'
         run: cmake --build build --config Release
 
-      - name: Run AppVeyor Windows target
-        if: matrix.provider == 'appveyor'
+  build-appveyor:
+    name: AppVeyor ${{ matrix.os }} ${{ matrix.compiler }} ${{ matrix.compiler_version }} ${{ matrix.architecture }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            compiler: msvc
+            compiler_version: '2019'
+            architecture: x86
+          - os: windows
+            compiler: msvc
+            compiler_version: '2019'
+            architecture: x64
+          - os: windows
+            compiler: msvc
+            compiler_version: '2017'
+            architecture: x86
+          - os: windows
+            compiler: msvc
+            compiler_version: '2017'
+            architecture: x64
+          - os: windows
+            compiler: msvc
+            compiler_version: '2015'
+            architecture: x86
+          - os: windows
+            compiler: msvc
+            compiler_version: '2015'
+            architecture: x64
+
+          - os: linux
+            compiler: gcc
+            compiler_version: '9'
+            architecture: x64
+          - os: linux
+            compiler: gcc
+            compiler_version: '8'
+            architecture: x64
+          - os: linux
+            compiler: gcc
+            compiler_version: '7'
+            architecture: x64
+          - os: linux
+            compiler: clang
+            compiler_version: '12'
+            architecture: x64
+          - os: linux
+            compiler: clang
+            compiler_version: '11'
+            architecture: x64
+          - os: linux
+            compiler: clang
+            compiler_version: '10'
+            architecture: x64
+          - os: linux
+            compiler: clang
+            compiler_version: '9'
+            architecture: x64
+
+          - os: macos
+            compiler: gcc
+            compiler_version: '12'
+            architecture: x64
+          - os: macos
+            compiler: gcc
+            compiler_version: '11'
+            architecture: x64
+          - os: macos
+            compiler: gcc
+            compiler_version: '10'
+            architecture: x64
+          - os: macos
+            compiler: clang
+            compiler_version: '14'
+            architecture: x64
+          - os: macos
+            compiler: clang
+            compiler_version: '13'
+            architecture: x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run AppVeyor fallback target
         run: >-
           python .github/scripts/appveyor_cli.py run-cmake-build
+          --os ${{ matrix.os }}
           --compiler ${{ matrix.compiler }}
           --compiler-version ${{ matrix.compiler_version }}
           --architecture ${{ matrix.architecture }}

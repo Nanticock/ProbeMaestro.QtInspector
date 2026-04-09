@@ -13,10 +13,14 @@ The utility uses only the Python standard library and currently covers the AppVe
 The workflow uses the composite command below so AppVeyor-specific API details stay out of the YAML file:
 
 ```bash
-python .github/scripts/appveyor_cli.py run-cmake-build --compiler msvc --compiler-version 2015 --architecture x64
+python .github/scripts/appveyor_cli.py run-cmake-build --os windows --compiler msvc --compiler-version 2015 --architecture x64
 ```
 
-The CLI accepts a normalized compiler description and converts it internally to the AppVeyor-specific CMake generator and platform settings it needs. An explicit `--generator` flag is still available as an escape hatch.
+The CLI accepts a normalized target description of operating system, compiler family, compiler version, and architecture. It converts that internally to the AppVeyor build worker image, compiler environment variables, and CMake generator settings it needs.
+
+GitHub Actions runs the compiler versions available on hosted Linux, macOS, and Windows runners natively. Older x64 toolchains fall back to AppVeyor through the same normalized interface.
+
+AppVeyor builds no longer depend on mutating project settings to encode target-specific state. The project is configured with a generic worker script once, and each triggered build receives its normalized target selection through environment variables, which the worker resolves locally.
 
 By default the CLI reads `APPVEYOR_ACCOUNT`, `APPVEYOR_PROJECT`, `APPVEYOR_TOKEN`, `GITHUB_HEAD_REF`, and `GITHUB_REF_NAME` from the environment.
 
