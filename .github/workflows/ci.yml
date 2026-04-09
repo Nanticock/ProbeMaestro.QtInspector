@@ -236,12 +236,6 @@ jobs:
             architecture: arm64
 
           - os: macos
-            runs_on: macos-14-intel
-            host_arch: x64
-            compiler: clang
-            compiler_version: '15'
-            architecture: x64
-          - os: macos
             runs_on: macos-14
             host_arch: arm64
             compiler: clang
