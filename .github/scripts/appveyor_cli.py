@@ -17,6 +17,7 @@ from appveyor_cmake_support import (
     build_request_environment_variables,
     resolve_appveyor_build_configuration,
     resolve_compiler_spec,
+    resolve_requested_appveyor_image,
 )
 
 
@@ -208,6 +209,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Build operating system such as windows, linux, or macos.",
     )
     cmake.add_argument(
+        "--image",
+        help="Explicit AppVeyor build worker image such as Visual Studio 2017, Ubuntu2004, or macos-sonoma.",
+    )
+    cmake.add_argument(
         "--generator",
         help="Explicit CMake generator override. The target OS/compiler/version/architecture still determine the AppVeyor image.",
     )
@@ -365,7 +370,11 @@ def handle_run_cmake_build(args: argparse.Namespace) -> int:
     project = resolve_project(args)
     client = build_client(args, project)
     spec = resolve_compiler_spec(args, allow_env=False)
-    build_config = resolve_appveyor_build_configuration(spec, generator_override=args.generator)
+    build_config = resolve_appveyor_build_configuration(
+        spec,
+        image_override=resolve_requested_appveyor_image(args, allow_env=False),
+        generator_override=args.generator,
+    )
     scripts = create_cmake_worker_scripts(args)
     previous_mode = client.set_project_build_scripts(project, scripts)
     print(f"Configured AppVeyor project {project.project_slug} for cmake script mode.")
@@ -515,6 +524,8 @@ def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
         "--config",
         args.config,
     ]
+    if args.image:
+        worker_cmd.extend(["--image", args.image])
     if args.generator:
         worker_cmd.extend(["--generator", args.generator])
     for configure_arg in args.configure_arg:

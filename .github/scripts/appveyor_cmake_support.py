@@ -14,53 +14,43 @@ TARGET_OS_ENV_VAR = "PM_CI_OS"
 COMPILER_ENV_VAR = "PM_CI_COMPILER"
 COMPILER_VERSION_ENV_VAR = "PM_CI_COMPILER_VERSION"
 ARCHITECTURE_ENV_VAR = "PM_CI_ARCHITECTURE"
-MSVC_GENERATORS = {
-    "2015": "Visual Studio 14 2015",
-    "2017": "Visual Studio 15 2017",
-    "2019": "Visual Studio 16 2019",
-    "2022": "Visual Studio 17 2022",
-}
-WINDOWS_MSVC_IMAGES = {
+DEFAULT_WINDOWS_MSVC_IMAGE_BY_VERSION = {
     "2015": "Visual Studio 2015",
     "2017": "Visual Studio 2017",
     "2019": "Visual Studio 2019",
     "2022": "Visual Studio 2022",
 }
-LINUX_GCC_IMAGES = {
-    "7": "Ubuntu",
-    "8": "Ubuntu",
-    "9": "Ubuntu2004",
-    "10": "Ubuntu2204",
-    "11": "Ubuntu2204",
-    "12": "Ubuntu2204",
-    "13": "Ubuntu2204",
+SUPPORTED_WINDOWS_MSVC_IMAGES = {
+    "Visual Studio 2015": ("2015",),
+    "Visual Studio 2017": ("2015", "2017"),
+    "Visual Studio 2019": ("2019",),
+    "Visual Studio 2022": ("2022",),
 }
-LINUX_CLANG_IMAGES = {
-    "9": "Ubuntu",
-    "10": "Ubuntu",
-    "11": "Ubuntu",
-    "12": "Ubuntu2004",
-    "13": "Ubuntu2004",
-    "14": "Ubuntu2204",
-    "15": "Ubuntu2204",
-    "16": "Ubuntu2204",
-    "17": "Ubuntu2204",
-    "18": "Ubuntu2204",
-    "19": "Ubuntu2204",
-    "20": "Ubuntu2204",
+SUPPORTED_LINUX_GCC_IMAGES = {
+    "Ubuntu": ("7", "8", "9"),
+    "Ubuntu2004": ("9", "10", "11"),
+    "Ubuntu2204": ("9", "10", "11", "12", "13"),
 }
-MACOS_GCC_IMAGES = {
-    "10": "macos-monterey",
-    "11": "macos-ventura",
-    "12": "macos-sonoma",
-    "13": "macos-sonoma",
-    "14": "macos-sonoma",
-    "15": "macos-sonoma",
+SUPPORTED_LINUX_CLANG_IMAGES = {
+    "Ubuntu": ("9", "10", "11", "12", "13", "14"),
+    "Ubuntu2004": ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"),
+    "Ubuntu2204": ("13", "14", "15", "16", "17", "18", "19", "20"),
 }
-MACOS_CLANG_IMAGES = {
-    "13": "macos-monterey",
-    "14": "macos-ventura",
-    "15": "macos-sonoma",
+SUPPORTED_MACOS_GCC_IMAGES = {
+    "macos-monterey": ("10", "11", "12"),
+    "macos-ventura": ("10", "11", "12"),
+    "macos-sonoma": ("10", "11", "12"),
+}
+SUPPORTED_MACOS_CLANG_IMAGES = {
+    "macos-monterey": ("13", "14"),
+    "macos-ventura": ("13", "14", "15"),
+    "macos-sonoma": ("13", "14", "15"),
+}
+MSVC_GENERATORS = {
+    "2015": "Visual Studio 14 2015",
+    "2017": "Visual Studio 15 2017",
+    "2019": "Visual Studio 16 2019",
+    "2022": "Visual Studio 17 2022",
 }
 
 
@@ -98,21 +88,27 @@ def build_request_environment_variables(
     return environment
 
 
+def normalize_appveyor_image(image: str | None) -> str | None:
+    value = str(image or "").strip()
+    return value or None
+
+
 def resolve_appveyor_build_configuration(
     spec: CompilerSpec,
     *,
+    image_override: str | None = None,
     generator_override: str | None = None,
 ) -> AppVeyorBuildConfiguration:
     if spec.os_name == "windows" and spec.compiler == "msvc":
-        build_config = resolve_msvc_appveyor_build_configuration(spec)
+        build_config = resolve_msvc_appveyor_build_configuration(spec, image_override)
     elif spec.os_name == "linux" and spec.compiler == "gcc":
-        build_config = resolve_linux_gcc_appveyor_build_configuration(spec)
+        build_config = resolve_linux_gcc_appveyor_build_configuration(spec, image_override)
     elif spec.os_name == "linux" and spec.compiler == "clang":
-        build_config = resolve_linux_clang_appveyor_build_configuration(spec)
+        build_config = resolve_linux_clang_appveyor_build_configuration(spec, image_override)
     elif spec.os_name == "macos" and spec.compiler == "gcc":
-        build_config = resolve_macos_gcc_appveyor_build_configuration(spec)
+        build_config = resolve_macos_gcc_appveyor_build_configuration(spec, image_override)
     elif spec.os_name == "macos" and spec.compiler == "clang":
-        build_config = resolve_macos_clang_appveyor_build_configuration(spec)
+        build_config = resolve_macos_clang_appveyor_build_configuration(spec, image_override)
     else:
         raise AppVeyorCMakeError(
             "Unsupported AppVeyor compiler configuration "
@@ -152,6 +148,14 @@ def resolve_compiler_spec(args: argparse.Namespace, *, allow_env: bool) -> Compi
     return CompilerSpec(os_name=os_name, compiler=compiler, version=version, architecture=architecture)
 
 
+def resolve_requested_appveyor_image(args: argparse.Namespace, *, allow_env: bool) -> str | None:
+    if getattr(args, "image", None):
+        return normalize_appveyor_image(args.image)
+    if allow_env:
+        return normalize_appveyor_image(os.getenv(APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR))
+    return None
+
+
 def normalize_required_option(value: str | None, option_name: str) -> str:
     normalized = normalize_token(value)
     if normalized:
@@ -180,7 +184,7 @@ def normalize_os_name(os_name: str) -> str:
     raise AppVeyorCMakeError(f"Unsupported build OS '{os_name}'. Supported values: windows, linux, macos.")
 
 
-def resolve_msvc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
+def resolve_msvc_appveyor_build_configuration(spec: CompilerSpec, image_override: str | None) -> AppVeyorBuildConfiguration:
     generator_version = normalize_msvc_version(spec.version)
     generator = MSVC_GENERATORS.get(generator_version)
     if generator is None:
@@ -189,12 +193,18 @@ def resolve_msvc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBui
 
     architecture = normalize_msvc_architecture(spec.architecture)
     configure_args = ("-A", architecture)
-    image = WINDOWS_MSVC_IMAGES[generator_version]
+    image = select_supported_image(
+        generator_version,
+        SUPPORTED_WINDOWS_MSVC_IMAGES,
+        DEFAULT_WINDOWS_MSVC_IMAGE_BY_VERSION[generator_version],
+        "MSVC",
+        image_override,
+    )
     return AppVeyorBuildConfiguration(image=image, generator=generator, configure_args=configure_args)
 
 
-def resolve_linux_gcc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, LINUX_GCC_IMAGES, "GCC")
+def resolve_linux_gcc_appveyor_build_configuration(spec: CompilerSpec, image_override: str | None) -> AppVeyorBuildConfiguration:
+    image = select_supported_image(spec.version, SUPPORTED_LINUX_GCC_IMAGES, "Ubuntu2004", "GCC", image_override)
     architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
     if architecture != "x64":
         raise AppVeyorCMakeError("AppVeyor Linux GCC builds currently support x64 only.")
@@ -205,8 +215,8 @@ def resolve_linux_gcc_appveyor_build_configuration(spec: CompilerSpec) -> AppVey
     )
 
 
-def resolve_linux_clang_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, LINUX_CLANG_IMAGES, "Clang")
+def resolve_linux_clang_appveyor_build_configuration(spec: CompilerSpec, image_override: str | None) -> AppVeyorBuildConfiguration:
+    image = select_supported_image(spec.version, SUPPORTED_LINUX_CLANG_IMAGES, "Ubuntu2004", "Clang", image_override)
     architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
     if architecture != "x64":
         raise AppVeyorCMakeError("AppVeyor Linux Clang builds currently support x64 only.")
@@ -217,8 +227,8 @@ def resolve_linux_clang_appveyor_build_configuration(spec: CompilerSpec) -> AppV
     )
 
 
-def resolve_macos_gcc_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, MACOS_GCC_IMAGES, "macOS GCC")
+def resolve_macos_gcc_appveyor_build_configuration(spec: CompilerSpec, image_override: str | None) -> AppVeyorBuildConfiguration:
+    image = select_supported_image(spec.version, SUPPORTED_MACOS_GCC_IMAGES, "macos-sonoma", "macOS GCC", image_override)
     architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
     if architecture != "x64":
         raise AppVeyorCMakeError("AppVeyor macOS GCC builds currently support x64 only.")
@@ -229,8 +239,8 @@ def resolve_macos_gcc_appveyor_build_configuration(spec: CompilerSpec) -> AppVey
     )
 
 
-def resolve_macos_clang_appveyor_build_configuration(spec: CompilerSpec) -> AppVeyorBuildConfiguration:
-    image = resolve_image(spec.version, MACOS_CLANG_IMAGES, "macOS Clang")
+def resolve_macos_clang_appveyor_build_configuration(spec: CompilerSpec, image_override: str | None) -> AppVeyorBuildConfiguration:
+    image = select_supported_image(spec.version, SUPPORTED_MACOS_CLANG_IMAGES, "macos-sonoma", "macOS Clang", image_override)
     architecture = normalize_unix_appveyor_architecture(spec.architecture, spec.os_name, spec.compiler)
     if architecture != "x64":
         raise AppVeyorCMakeError("AppVeyor macOS Clang builds currently support x64 only.")
@@ -241,12 +251,34 @@ def resolve_macos_clang_appveyor_build_configuration(spec: CompilerSpec) -> AppV
     )
 
 
-def resolve_image(version: str, supported_images: dict[str, str], label: str) -> str:
-    image = supported_images.get(version)
-    if image:
-        return image
-    supported = ", ".join(sorted(supported_images))
-    raise AppVeyorCMakeError(f"Unsupported {label} version '{version}'. Supported versions: {supported}.")
+def select_supported_image(
+    version: str,
+    supported_versions_by_image: dict[str, tuple[str, ...]],
+    default_image: str,
+    label: str,
+    image_override: str | None,
+) -> str:
+    if image_override:
+        supported_versions = supported_versions_by_image.get(image_override)
+        if supported_versions is None:
+            supported_images = ", ".join(sorted(supported_versions_by_image))
+            raise AppVeyorCMakeError(f"Unsupported AppVeyor image '{image_override}' for {label}. Supported images: {supported_images}.")
+        if version not in supported_versions:
+            supported = ", ".join(supported_versions)
+            raise AppVeyorCMakeError(
+                f"Unsupported {label} version '{version}' on AppVeyor image '{image_override}'. Supported versions on that image: {supported}."
+            )
+        return image_override
+
+    if version in supported_versions_by_image.get(default_image, ()):
+        return default_image
+
+    for image_name, versions in supported_versions_by_image.items():
+        if version in versions:
+            return image_name
+
+    supported = sorted({supported_version for versions in supported_versions_by_image.values() for supported_version in versions})
+    raise AppVeyorCMakeError(f"Unsupported {label} version '{version}'. Supported versions: {', '.join(supported)}.")
 
 
 def normalize_msvc_version(version: str) -> str:
