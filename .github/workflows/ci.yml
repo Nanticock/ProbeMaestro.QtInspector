@@ -399,7 +399,6 @@ jobs:
           - profile: windows-vs2017
           - profile: windows-vs2019
           - profile: windows-vs2022
-          - profile: linux-ubuntu
           - profile: linux-ubuntu2004
           - profile: linux-ubuntu2204
           - profile: macos-sonoma
