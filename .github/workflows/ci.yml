@@ -23,114 +23,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Configure AppVeyor project for cmake build
-        # We use PUT /api/projects (JSON settings) instead of PUT /api/projects/.../settings/yaml
-        # because the YAML endpoint returns HTTP 500 (NullReferenceException) — a server-side
-        # bug in AppVeyor's YAML parser. The JSON endpoint is stable and does not go through
-        # AppVeyor's buggy YAML ingestion path.
-        #
-        # We GET the full settings first so we only mutate the two fields we care about
-        # (buildMode and buildScripts), leaving all other project settings intact.
-        #
-        # SCRIPTING LANGUAGE CHOICE — PowerShell Core (pwsh):
-        # Build script items are stored as strings. Items prefixed with "ps:" run in
-        # PowerShell; un-prefixed items run in cmd.exe. ALL build commands in this
-        # project MUST be written as PowerShell and prefixed with "ps:" because
-        # PowerShell Core (pwsh) is available on ALL AppVeyor images (Windows, Linux,
-        # macOS) and is the only cross-platform shell choice. Do NOT write bare cmd.exe
-        # batch commands (cd, mkdir, set, etc.) in buildScripts.
-        #
-        # cmake -B / -S flags: cmake 3.12+ is pre-installed on all AppVeyor images
-        # (including VS 2015 — https://www.appveyor.com/docs/windows-images-software/).
-        # We use the modern -B build -S . form rather than the mkdir+cd+.. form.
-        run: |
-          GET_RESPONSE=$(curl -s \
-            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-            "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/settings")
+      - uses: actions/checkout@v4
 
-          echo "Current buildMode: $(echo "$GET_RESPONSE" | jq -r '.settings.configuration.buildMode')"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-          UPDATED=$(echo "$GET_RESPONSE" | jq \
-            --arg cmd1 'cmake -B build -S . -G "Visual Studio 14 2015"' \
-            --arg cmd2 'cmake --build build --config Release' \
-            '.settings.configuration.buildMode = "script" |
-             .settings.configuration.buildScripts = [{"language": "ps", "script": $cmd1}, {"language": "ps", "script": $cmd2}] |
-             .settings')
-
-          curl -s -w "\n%{http_code}" -X PUT \
-            "https://ci.appveyor.com/api/account/$APPVEYOR_ACCOUNT/projects" \
-            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$UPDATED" \
-            > /tmp/appveyor_put_response.txt
-
-          HTTP_STATUS=$(tail -n 1 /tmp/appveyor_put_response.txt)
-          RESPONSE_BODY=$(head -n -1 /tmp/appveyor_put_response.txt)
-          echo "PUT /api/projects HTTP $HTTP_STATUS"
-          echo "Response body: $RESPONSE_BODY"
-          if [ "$HTTP_STATUS" != "204" ]; then
-            echo "::error::AppVeyor PUT /api/projects failed HTTP $HTTP_STATUS — $RESPONSE_BODY"
-            exit 1
-          fi
-
-        env:
-          APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
-
-      - name: Trigger AppVeyor build
-        run: |
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          echo "Using branch: $BRANCH"
-
-          RESPONSE=$(curl -s -X POST \
-            "https://ci.appveyor.com/api/account/$APPVEYOR_ACCOUNT/builds" \
-            -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"accountName\": \"$APPVEYOR_ACCOUNT\",
-              \"projectSlug\": \"$APPVEYOR_PROJECT\",
-              \"branch\": \"$BRANCH\"
-            }")
-
-          echo "POST /api/builds response: $RESPONSE"
-
-          BUILD_VERSION=$(echo "$RESPONSE" | jq -r '.version')
-
-          if [ "$BUILD_VERSION" = "null" ] || [ -z "$BUILD_VERSION" ]; then
-            echo "::error::AppVeyor POST /builds failed — response: $RESPONSE"
-            exit 1
-          fi
-
-          echo "BUILD_VERSION=$BUILD_VERSION" >> $GITHUB_ENV
-
-        env:
-          APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
-
-      - name: Wait for AppVeyor build
-        run: |
-          # Print the AppVeyor build URL for manual inspection
-          echo "AppVeyor build: https://ci.appveyor.com/project/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/builds/$(curl -s -H "Authorization: Bearer $APPVEYOR_TOKEN" "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/build/$BUILD_VERSION" | jq -r '.build.buildId')"
-
-          while true; do
-            RESPONSE=$(curl -s \
-              -H "Authorization: Bearer $APPVEYOR_TOKEN" \
-              "https://ci.appveyor.com/api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/build/$BUILD_VERSION")
-
-            STATUS=$(echo "$RESPONSE" | jq -r '.build.status')
-            echo "Status: $STATUS"
-
-            if [ "$STATUS" = "success" ]; then
-              exit 0
-            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "cancelled" ]; then
-              BUILD_ID=$(echo "$RESPONSE" | jq -r '.build.buildId')
-              JOB_ID=$(echo "$RESPONSE" | jq -r '.build.jobs[0].jobId')
-              echo "::error::AppVeyor build $BUILD_VERSION ($BUILD_ID) $STATUS — https://ci.appveyor.com/project/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT/builds/$BUILD_ID"
-              echo "Fetching build log..."
-              curl -s -H "Authorization: Bearer $APPVEYOR_TOKEN" "https://ci.appveyor.com/api/buildjobs/$JOB_ID/log" | tail -50
-              exit 1
-            fi
-
-            sleep 10
-          done
-
+      - name: Run AppVeyor MSVC 2015 build
+        run: python .github/scripts/appveyor_cli.py run-cmake-build --generator "Visual Studio 14 2015"
         env:
           APPVEYOR_TOKEN: ${{ secrets.APPVEYOR_TOKEN }}
