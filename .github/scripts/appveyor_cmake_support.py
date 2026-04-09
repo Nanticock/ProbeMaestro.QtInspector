@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
+from functools import lru_cache
 from dataclasses import dataclass
 from typing import Sequence
 
 
 APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR = "APPVEYOR_BUILD_WORKER_IMAGE"
+APPVEYOR_PROFILE_ID_ENV_VAR = "PM_CI_PROFILE_ID"
 TARGET_OS_ENV_VAR = "PM_CI_OS"
 COMPILER_ENV_VAR = "PM_CI_COMPILER"
 COMPILER_VERSION_ENV_VAR = "PM_CI_COMPILER_VERSION"
 ARCHITECTURE_ENV_VAR = "PM_CI_ARCHITECTURE"
+APPVEYOR_PROFILES_FILE = os.path.join(os.path.dirname(__file__), "appveyor_profiles.json")
 DEFAULT_WINDOWS_MSVC_IMAGE_BY_VERSION = {
     "2015": "Visual Studio 2015",
     "2017": "Visual Studio 2017",
@@ -74,6 +78,21 @@ class AppVeyorBuildConfiguration:
     environment_variables: dict[str, str] | None = None
 
 
+@dataclass(frozen=True)
+class AppVeyorCompilerGroup:
+    name: str
+    versions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AppVeyorProfile:
+    profile_id: str
+    os_name: str
+    image: str
+    architectures: tuple[str, ...]
+    compilers: tuple[AppVeyorCompilerGroup, ...]
+
+
 def build_request_environment_variables(
     spec: CompilerSpec,
     build_config: AppVeyorBuildConfiguration,
@@ -86,6 +105,49 @@ def build_request_environment_variables(
     environment[COMPILER_VERSION_ENV_VAR] = spec.version
     environment[ARCHITECTURE_ENV_VAR] = spec.architecture
     return environment
+
+
+def build_profile_environment_variables(
+    profile: AppVeyorProfile,
+    extra_variables: dict[str, str] | None,
+) -> dict[str, str]:
+    environment = dict(extra_variables or {})
+    environment[APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR] = profile.image
+    environment[APPVEYOR_PROFILE_ID_ENV_VAR] = profile.profile_id
+    return environment
+
+
+@lru_cache(maxsize=1)
+def load_appveyor_profiles() -> dict[str, AppVeyorProfile]:
+    with open(APPVEYOR_PROFILES_FILE, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    profiles: dict[str, AppVeyorProfile] = {}
+    for item in payload.get("profiles", []):
+        profile = AppVeyorProfile(
+            profile_id=str(item["id"]),
+            os_name=normalize_os_name(str(item["os"])),
+            image=str(item["image"]),
+            architectures=tuple(str(value) for value in item.get("architectures", [])),
+            compilers=tuple(
+                AppVeyorCompilerGroup(
+                    name=normalize_token(group["name"]),
+                    versions=tuple(str(version) for version in group.get("versions", [])),
+                )
+                for group in item.get("compilers", [])
+            ),
+        )
+        profiles[profile.profile_id] = profile
+
+    return profiles
+
+
+def resolve_appveyor_profile(profile_id: str) -> AppVeyorProfile:
+    profile = load_appveyor_profiles().get(str(profile_id).strip())
+    if profile is not None:
+        return profile
+    supported = ", ".join(sorted(load_appveyor_profiles()))
+    raise AppVeyorCMakeError(f"Unsupported AppVeyor profile '{profile_id}'. Supported profiles: {supported}.")
 
 
 def normalize_appveyor_image(image: str | None) -> str | None:

@@ -14,7 +14,10 @@ from urllib import error, request
 
 from appveyor_cmake_support import (
     AppVeyorCMakeError,
+    AppVeyorProfile,
+    build_profile_environment_variables,
     build_request_environment_variables,
+    resolve_appveyor_profile,
     resolve_appveyor_build_configuration,
     resolve_compiler_spec,
     resolve_requested_appveyor_image,
@@ -242,6 +245,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Extra argument appended to the cmake build command. Can be repeated.",
     )
 
+    profile = argparse.ArgumentParser(add_help=False)
+    profile.add_argument(
+        "--profile",
+        required=True,
+        help="AppVeyor image profile id declared in .github/scripts/appveyor_profiles.json.",
+    )
+
     configure_cmd = subparsers.add_parser(
         "configure-cmake-project",
         parents=[common, cmake],
@@ -317,6 +327,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_cmd.set_defaults(handler=handle_run_cmake_build)
 
+    run_profile_cmd = subparsers.add_parser(
+        "run-cmake-profile",
+        parents=[common, profile, cmake],
+        help="Configure the project for a batched AppVeyor image profile build, trigger it, and wait for completion.",
+    )
+    run_profile_cmd.add_argument("--branch", help="Branch to build. Defaults to GitHub Actions branch variables.")
+    run_profile_cmd.add_argument("--commit-id", help="Specific commit to build.")
+    run_profile_cmd.add_argument("--pull-request-id", help="Pull request ID to build instead of a branch.")
+    run_profile_cmd.add_argument(
+        "--env",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="Build environment variable to send to AppVeyor. Can be repeated.",
+    )
+    run_profile_cmd.add_argument("--poll-interval", type=int, default=10, help="Polling interval in seconds.")
+    run_profile_cmd.add_argument(
+        "--timeout",
+        type=int,
+        default=0,
+        help="Optional timeout in seconds. Zero waits indefinitely.",
+    )
+    run_profile_cmd.add_argument(
+        "--log-lines",
+        type=int,
+        default=50,
+        help="Number of trailing log lines to print on failure.",
+    )
+    run_profile_cmd.set_defaults(handler=handle_run_cmake_profile)
+
     return parser
 
 
@@ -391,6 +431,45 @@ def handle_run_cmake_build(args: argparse.Namespace) -> int:
         environment_variables=build_request_environment_variables(
             spec,
             build_config,
+            parse_environment_variables(args.env),
+        ),
+    )
+    build_version = str(response.get("version", "")).strip()
+    if not build_version:
+        raise AppVeyorError(f"AppVeyor did not return a build version: {json.dumps(response, sort_keys=True)}")
+
+    print(f"Started AppVeyor build version {build_version}.")
+    wait_for_build(
+        client,
+        project,
+        build_version,
+        poll_interval=max(args.poll_interval, 1),
+        timeout=args.timeout,
+        log_lines=max(args.log_lines, 1),
+    )
+    return 0
+
+
+def handle_run_cmake_profile(args: argparse.Namespace) -> int:
+    project = resolve_project(args)
+    client = build_client(args, project)
+    profile = resolve_appveyor_profile(args.profile)
+    scripts = create_cmake_worker_scripts(args)
+    previous_mode = client.set_project_build_scripts(project, scripts)
+    print(f"Configured AppVeyor project {project.project_slug} for cmake script mode.")
+    if previous_mode:
+        print(f"Previous buildMode: {previous_mode}")
+    print_profile_summary(profile)
+
+    branch = None if args.pull_request_id else resolve_branch(args.branch)
+    response = start_build_with_retry(
+        client,
+        project,
+        branch=branch,
+        commit_id=args.commit_id,
+        pull_request_id=args.pull_request_id,
+        environment_variables=build_profile_environment_variables(
+            profile,
             parse_environment_variables(args.env),
         ),
     )
@@ -524,6 +603,8 @@ def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
         "--config",
         args.config,
     ]
+    if getattr(args, "profile", None):
+        worker_cmd.extend(["--profile", args.profile])
     if args.image:
         worker_cmd.extend(["--image", args.image])
     if args.generator:
@@ -552,6 +633,17 @@ def create_cmake_worker_scripts(args: argparse.Namespace) -> list[BuildScript]:
         "if ($LastExitCode -ne 0) { exit $LastExitCode }",
     ]
     return [BuildScript(language="pwsh", script="\n".join(script_lines))]
+
+
+def print_profile_summary(profile: AppVeyorProfile) -> None:
+    compiler_parts: list[str] = []
+    for compiler in profile.compilers:
+        compiler_parts.append(f"{compiler.name} {', '.join(compiler.versions)}")
+    print(
+        f"AppVeyor profile {profile.profile_id}: image={profile.image}, "
+        f"architectures={', '.join(profile.architectures)}, "
+        f"compilers={'; '.join(compiler_parts)}"
+    )
 
 def format_command(command: Sequence[str]) -> str:
     return " ".join(quote_powershell_argument(part) for part in command)

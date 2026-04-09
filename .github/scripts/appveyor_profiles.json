@@ -1,0 +1,96 @@
+{
+  "profiles": [
+    {
+      "id": "windows-vs2017",
+      "os": "windows",
+      "image": "Visual Studio 2017",
+      "architectures": ["x86", "x64"],
+      "compilers": [
+        {
+          "name": "msvc",
+          "versions": ["2015", "2017"]
+        }
+      ]
+    },
+    {
+      "id": "windows-vs2019",
+      "os": "windows",
+      "image": "Visual Studio 2019",
+      "architectures": ["x86", "x64"],
+      "compilers": [
+        {
+          "name": "msvc",
+          "versions": ["2019"]
+        }
+      ]
+    },
+    {
+      "id": "windows-vs2022",
+      "os": "windows",
+      "image": "Visual Studio 2022",
+      "architectures": ["x86", "x64"],
+      "compilers": [
+        {
+          "name": "msvc",
+          "versions": ["2022"]
+        }
+      ]
+    },
+    {
+      "id": "linux-ubuntu",
+      "os": "linux",
+      "image": "Ubuntu",
+      "architectures": ["x64"],
+      "compilers": [
+        {
+          "name": "gcc",
+          "versions": ["7", "8"]
+        }
+      ]
+    },
+    {
+      "id": "linux-ubuntu2004",
+      "os": "linux",
+      "image": "Ubuntu2004",
+      "architectures": ["x64"],
+      "compilers": [
+        {
+          "name": "clang",
+          "versions": ["9", "10", "11", "12"]
+        }
+      ]
+    },
+    {
+      "id": "linux-ubuntu2204",
+      "os": "linux",
+      "image": "Ubuntu2204",
+      "architectures": ["x64"],
+      "compilers": [
+        {
+          "name": "gcc",
+          "versions": ["9", "10", "11", "12", "13"]
+        },
+        {
+          "name": "clang",
+          "versions": ["13", "14", "15", "16", "17", "18", "19", "20"]
+        }
+      ]
+    },
+    {
+      "id": "macos-sonoma",
+      "os": "macos",
+      "image": "macos-sonoma",
+      "architectures": ["x64"],
+      "compilers": [
+        {
+          "name": "gcc",
+          "versions": ["10", "11", "12"]
+        },
+        {
+          "name": "clang",
+          "versions": ["13", "14", "15"]
+        }
+      ]
+    }
+  ]
+}

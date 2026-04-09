@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -11,6 +12,8 @@ COMPILER_ENV_VAR = "PM_CI_COMPILER"
 COMPILER_VERSION_ENV_VAR = "PM_CI_COMPILER_VERSION"
 ARCHITECTURE_ENV_VAR = "PM_CI_ARCHITECTURE"
 APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR = "APPVEYOR_BUILD_WORKER_IMAGE"
+APPVEYOR_PROFILE_ID_ENV_VAR = "PM_CI_PROFILE_ID"
+APPVEYOR_PROFILES_FILE = os.path.join(os.path.dirname(__file__), "appveyor_profiles.json")
 DEFAULT_WINDOWS_MSVC_IMAGE_BY_VERSION = {
     "2015": "Visual Studio 2015",
     "2017": "Visual Studio 2017",
@@ -63,6 +66,7 @@ def build_parser():
     parser.add_argument("--build-dir", default="build", help="Build directory for cmake -B.")
     parser.add_argument("--config", default="Release", help="Build configuration passed to cmake --build.")
     parser.add_argument("--os", help="Build operating system such as windows, linux, or macos.")
+    parser.add_argument("--profile", help="AppVeyor image profile id declared in .github/scripts/appveyor_profiles.json.")
     parser.add_argument("--image", help="Explicit AppVeyor build worker image such as Visual Studio 2017, Ubuntu2004, or macos-sonoma.")
     parser.add_argument(
         "--generator",
@@ -122,6 +126,56 @@ def resolve_requested_appveyor_image(args, allow_env):
     if allow_env:
         return normalize_appveyor_image(os.getenv(APPVEYOR_BUILD_WORKER_IMAGE_ENV_VAR))
     return None
+
+
+def resolve_requested_appveyor_profile(args, allow_env):
+    if getattr(args, "profile", None):
+        return normalize_profile_id(args.profile)
+    if allow_env:
+        return normalize_profile_id(os.getenv(APPVEYOR_PROFILE_ID_ENV_VAR))
+    return None
+
+
+def normalize_profile_id(value):
+    normalized = str(value or "").strip()
+    if normalized:
+        return normalized
+    return None
+
+
+def load_appveyor_profiles():
+    handle = open(APPVEYOR_PROFILES_FILE, "r")
+    try:
+        return json.load(handle)
+    finally:
+        handle.close()
+
+
+def resolve_appveyor_profile(profile_id):
+    payload = load_appveyor_profiles()
+    for profile in payload.get("profiles", []):
+        if str(profile.get("id", "")).strip() == profile_id:
+            return profile
+    supported = ", ".join(sorted([str(profile.get("id", "")).strip() for profile in payload.get("profiles", [])]))
+    raise AppVeyorWorkerError("Unsupported AppVeyor profile '%s'. Supported profiles: %s." % (profile_id, supported))
+
+
+def iter_profile_targets(profile):
+    os_name = normalize_os_name(str(profile.get("os", "")))
+    architectures = [normalize_required_option(value, "profile architectures") for value in profile.get("architectures", [])]
+    compilers = profile.get("compilers", [])
+    for compiler_group in compilers:
+        compiler_name = normalize_required_option(compiler_group.get("name"), "profile compiler")
+        versions = compiler_group.get("versions", [])
+        for version in versions:
+            normalized_version = normalize_required_option(version, "profile compiler version")
+            for architecture in architectures:
+                yield {
+                    "os_name": os_name,
+                    "compiler": compiler_name,
+                    "version": normalized_version,
+                    "architecture": architecture,
+                }
 
 
 def normalize_appveyor_image(image):
@@ -356,6 +410,67 @@ def run_local_cmake_build(args, spec, build_config):
     run_command(build_cmd, environment)
 
 
+def run_profile_builds(args, profile):
+    failures = []
+    targets = list(iter_profile_targets(profile))
+    total_targets = len(targets)
+    image_name = str(profile.get("image", "")).strip()
+
+    if total_targets == 0:
+        raise AppVeyorWorkerError("Profile '%s' does not define any targets." % str(profile.get("id", "<unknown>")))
+
+    write_line(
+        "Running AppVeyor profile %s on image %s with %s target(s)."
+        % (str(profile.get("id", "<unknown>")), image_name, total_targets)
+    )
+
+    for index, spec in enumerate(targets, 1):
+        label = build_target_label(spec)
+        build_args = clone_args_for_target(args, label)
+        write_line("[%s/%s] Starting %s" % (index, total_targets, label))
+        try:
+            build_config = resolve_appveyor_build_configuration(
+                spec,
+                image_override=image_name,
+                generator_override=args.generator,
+            )
+            run_local_cmake_build(build_args, spec, build_config)
+            write_line("[%s/%s] Succeeded %s" % (index, total_targets, label))
+        except AppVeyorWorkerError as exc:
+            failures.append((label, str(exc)))
+            write_line("[%s/%s] Failed %s" % (index, total_targets, label))
+            write_line("::error::%s" % exc)
+
+    if failures:
+        write_line("Profile summary: %s of %s target(s) failed." % (len(failures), total_targets))
+        for label, message in failures:
+            write_line("FAILED %s: %s" % (label, message))
+        raise AppVeyorWorkerError("Profile '%s' failed for %s target(s)." % (str(profile.get("id", "<unknown>")), len(failures)))
+
+    write_line("Profile summary: all %s target(s) succeeded." % total_targets)
+
+
+def build_target_label(spec):
+    return "%s-%s-%s" % (spec["compiler"], spec["version"], spec["architecture"])
+
+
+def clone_args_for_target(args, label):
+    return argparse.Namespace(
+        source_dir=args.source_dir,
+        build_dir=os.path.join(args.build_dir, label),
+        config=args.config,
+        os=args.os,
+        profile=args.profile,
+        image=args.image,
+        generator=args.generator,
+        compiler=args.compiler,
+        compiler_version=args.compiler_version,
+        architecture=args.architecture,
+        configure_arg=list(args.configure_arg),
+        build_arg=list(args.build_arg),
+    )
+
+
 def run_command(command, environment):
     write_line("Running: %s" % format_command(command))
     try:
@@ -422,6 +537,12 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
 
     try:
+        profile_id = resolve_requested_appveyor_profile(args, allow_env=True)
+        if profile_id:
+            profile = resolve_appveyor_profile(profile_id)
+            run_profile_builds(args, profile)
+            return 0
+
         spec = resolve_compiler_spec(args, allow_env=True)
         build_config = resolve_appveyor_build_configuration(
             spec,
