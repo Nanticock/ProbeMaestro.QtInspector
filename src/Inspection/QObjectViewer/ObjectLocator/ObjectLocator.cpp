@@ -3,7 +3,6 @@
 #include "CacheRepo.h"
 
 #include <Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h>
-#include <MainThreadHijacker.h>
 #include <QObjectViewer/PointerChecker/QMetaObjectPointerChecker.h>
 #include <QObjectViewer/PointerChecker/QObjectPointerChecker.h>
 #include <compat_Qt.h>
@@ -777,12 +776,10 @@ QObject *ObjectLocator::getQmlSingleton(const QString &singletonName, QQmlEngine
 
 QObject *ObjectLocator::getQmlSingleton(const QString &uri, int versionMajor, int versionMinor, const QString &qmlName, QQmlEngine *engine)
 {
-    // get the instance of a QML singleton
-    //
-    // Refer to: https://sl.bing.net/ksaHYWsbLAi
+    // FIXME: search for all available qml engines and use them in the search
 
-    if (engine == nullptr && MainThreadHijacker::mainWindowEngine())
-        engine = MainThreadHijacker::mainWindowEngine();
+    // if (engine == nullptr && MainThreadHijacker::mainWindowEngine())
+    //     engine = MainThreadHijacker::mainWindowEngine();
 
     if (engine == nullptr)
         return nullptr;

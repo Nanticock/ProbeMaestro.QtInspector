@@ -2,20 +2,14 @@
     linker,                                                                                                                                          \
     "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#include "QtInspector.h"
-#include "MainThreadHijacker.h"
+#include <Windows.h>
+
 #include "MainWindow.h"
+#include "QtInspector.h"
 
 #include <QMutex>
 
-static QSharedPointer<MainThreadHijacker> s_mainThreadHijacker;
 static QtMessageHandler s_nativeMessageHandler = nullptr;
-
-void initMainThreadHijacker()
-{
-    s_mainThreadHijacker = QSharedPointer<MainThreadHijacker>::create();
-    s_mainThreadHijacker->initialize();
-}
 
 void alternativeQtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
@@ -66,8 +60,6 @@ std::string getMSVCRuntimeVersion()
 void PM::initializeQtInspector()
 {
     s_nativeMessageHandler = qInstallMessageHandler(alternativeQtMessageHandler);
-
-    initMainThreadHijacker();
 
     static MainWindow mainWindow;
     mainWindow.show();

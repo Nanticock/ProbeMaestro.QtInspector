@@ -105,7 +105,7 @@ inline void printRTTIInfo(void *obj, size_t imageBase)
     std::cout << "Class name: " << typeDescriptor->name << std::endl;
     std::cout << "Number of bases: " << classHierarchyDescriptor->numBaseClasses << std::endl;
 
-    for (int i = 0; i < classHierarchyDescriptor->numBaseClasses; ++i)
+    for (unsigned long i = 0; i < classHierarchyDescriptor->numBaseClasses; ++i)
     {
         _RTTIBaseClassArray *baseClassArray = addressFromRelativeOffset<_RTTIBaseClassArray>(classHierarchyDescriptor->pBaseClassArray, imageBase);
         _RTTIBaseClassDescriptor *baseClassDescriptor =
