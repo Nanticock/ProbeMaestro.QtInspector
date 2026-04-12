@@ -35,9 +35,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->WindowChildrenTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTreeViewSelectionChanged);
 
     // menu connections
-
-    // Refer to:
-    // https://sl.bing.net/eLrE9p3QmjI
     ui->actionWindows->setMenu(new QMenu());
     ui->actionWindows->menu()->addAction(ui->dockWidget1->toggleViewAction());
     ui->actionWindows->menu()->addAction(ui->dockWidget3->toggleViewAction());
@@ -210,53 +207,35 @@ void MainWindow::onListAllActionsTriggered()
 
 void MainWindow::onExportResourceTriggered()
 {
-    bool ok = true;
-    bool error = false;
-    QString url = "";
-
+    QString url;
     QFile resourceFile;
 
-    while ((ok == true && url.isEmpty()) || error == true)
+    while (true) // Ask until valid or canceled
     {
-        error = false;
-        url = QInputDialog::getText(this, "Resource URL",
-                                    "Enter the URL for the resource in the format\n"
-                                    "\":/path/to/resource\"",
-                                    QLineEdit::Normal, url, &ok);
+        bool ok = false;
+        url = QInputDialog::getText(this, "Resource URL", "Enter the URL for the resource in the format\n\":/path/to/resource\"", QLineEdit::Normal,
+                                    url, &ok);
 
         if (!ok)
-            break;
+            return;
 
         resourceFile.setFileName(url);
 
         if (resourceFile.open(QFile::ReadOnly))
             break;
 
-        QMessageBox::critical(this, "Error",
-                              "Cannot find resource\n"
-                              "\"" +
-                                  url + "\"");
-        error = true;
+        QMessageBox::critical(this, "Error", "Cannot find resource\n\"" + url + "\"");
     }
 
-    if (!resourceFile.isOpen())
+    const QString fileName = QFileDialog::getSaveFileName(this, "Save", QFileInfo(url).fileName());
+
+    if (fileName.isEmpty())
         return;
 
-    QFileDialog fileDialog(nullptr, "Save");
-    fileDialog.setAcceptMode(QFileDialog::AcceptSave);
-    fileDialog.selectFile(QFileInfo(url).fileName());
-
-    if (!fileDialog.exec())
-        return;
-
-    QFile outputFile(fileDialog.selectedFiles().constFirst());
+    QFile outputFile(fileName);
     if (!outputFile.open(QFile::WriteOnly))
     {
-        QMessageBox::critical(this, "Error",
-                              "Cannot save file\n"
-                              "\"" +
-                                  outputFile.fileName() + "\"");
-
+        QMessageBox::critical(this, "Error", "Cannot save file\n\"" + outputFile.fileName() + "\"");
         return;
     }
 
