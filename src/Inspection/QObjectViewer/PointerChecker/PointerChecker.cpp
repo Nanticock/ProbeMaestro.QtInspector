@@ -8,10 +8,7 @@ namespace Internal
 {
 bool isReadableAddress(HANDLE hProcess, const void *address, size_t nSize)
 {
-    // Refer to:
-    // https://sl.bing.net/cC2d0HXy1ca
-
-    QByteArray buffer(nSize, 0x0);
+    QByteArray buffer(int(nSize), 0x0);
 
     // A variable to store the number of bytes read
     size_t bytesRead;

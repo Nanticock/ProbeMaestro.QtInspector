@@ -13,16 +13,12 @@
 
 static const char m_settingsGroupName[] = "probemaestro.qt_inspector.gui.main_window";
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), m_heirarchyViewToolbar(this)
 {
     ui->setupUi(this);
 
-    ui->WindowChildrenTreeView->setHeaderHidden(true);
-    ui->WindowChildrenTreeView->setModel(&m_objectTreeModel);
-    ui->WindowChildrenTreeView->setRootIndex(QModelIndex());
+    initializeHeirarchyView();
     ui->dockWidget2->setWidget(&m_qObjectViewer);
-
-    connect(ui->WindowChildrenTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTreeViewSelectionChanged);
 
     // menu connections
     ui->actionWindows->setMenu(new QMenu());
@@ -91,6 +87,32 @@ void MainWindow::saveWindowSettings()
         settings.setValue("state", saveState());
     }
     settings.endGroup();
+}
+
+void MainWindow::initializeHeirarchyView()
+{
+    ui->WindowChildrenTreeView->setHeaderHidden(true);
+    ui->WindowChildrenTreeView->setModel(&m_objectTreeModel);
+    ui->WindowChildrenTreeView->setRootIndex({});
+
+    connect(ui->WindowChildrenTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTreeViewSelectionChanged);
+
+    // --- Toolbar setup ---
+    m_heirarchyViewToolbar.setParent(ui->dockWidget1);
+    m_heirarchyViewToolbar.setMovable(false);
+    m_heirarchyViewToolbar.setFloatable(false);
+    m_heirarchyViewToolbar.addAction(ui->actionRefresh_hierarchy_view);
+
+    // --- Container ---
+    auto *container = new QWidget(ui->dockWidget1);
+    auto *layout = new QVBoxLayout(container);
+
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    layout->addWidget(&m_heirarchyViewToolbar);
+    layout->addWidget(ui->WindowChildrenTreeView);
+
+    ui->dockWidget1->setWidget(container);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

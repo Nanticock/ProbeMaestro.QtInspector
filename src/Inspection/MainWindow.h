@@ -27,6 +27,7 @@ public:
 private:
     void loadWindowSettings();
     void saveWindowSettings();
+    void initializeHeirarchyView();
 
     void closeEvent(QCloseEvent *event) override;
 
@@ -45,8 +46,15 @@ protected:
 private:
     Ui::MainWindow *ui;
 
-    QObjectViewer m_qObjectViewer;
+    // TODO: Move into a aseparate component, and add filtering options for
+    //          - Filtering objects by name
+    //          - Filtering objects by type
+    //          - Hiding invisible objects
+    //          - Hiding the window that contains the component
+    QToolBar m_heirarchyViewToolbar;
     ObjectTreeModel m_objectTreeModel;
+
+    QObjectViewer m_qObjectViewer;
 };
 
 #endif // MAINWINDOW_H

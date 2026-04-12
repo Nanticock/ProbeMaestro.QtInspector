@@ -87,6 +87,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <widget class="QWidget" name="dockWidgetContents2"/>
   </widget>
   <action name="actionRefresh_hierarchy_view">
+   <property name="icon">
+    <iconset resource="qml.qrc">
+     <normaloff>:/resources/icons/refresh_icon.svg</normaloff>:/resources/icons/refresh_icon.svg</iconset>
+   </property>
    <property name="text">
     <string>Refresh hierarchy view</string>
    </property>
@@ -145,6 +149,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="qml.qrc"/>
+ </resources>
  <connections/>
 </ui>
