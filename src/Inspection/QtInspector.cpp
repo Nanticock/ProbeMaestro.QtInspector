@@ -4,6 +4,7 @@
 
 #include "QtInspector.h"
 #include "MainThreadHijacker.h"
+#include "MainWindow.h"
 
 #include <QMutex>
 
@@ -67,4 +68,7 @@ void PM::initializeQtInspector()
     s_nativeMessageHandler = qInstallMessageHandler(alternativeQtMessageHandler);
 
     initMainThreadHijacker();
+
+    static MainWindow mainWindow;
+    mainWindow.show();
 }

@@ -15,8 +15,6 @@ constexpr char MAIN_WINDOW_ID[] = "applicationWindow";
 constexpr char SPLASH_SCREEN_WINDOW_ID[] = "_splashScreen";
 } // namespace
 
-static MainWindow *s_auxiliaryWindow = nullptr;
-
 // important windows
 static QWindow *s_mainWindow = nullptr;
 static QWindow *s_splashScreenWindow = nullptr;
@@ -159,19 +157,8 @@ void MainThreadHijacker::initializeMods()
     modsMenuItemsList.append(mod2MenuItem);
 }
 
-void MainThreadHijacker::showAuxiliaryWindow()
-{
-    if (s_auxiliaryWindow == nullptr)
-        s_auxiliaryWindow = new MainWindow();
-
-    s_auxiliaryWindow->show();
-}
-
 void MainThreadHijacker::onMainWindowDisplayed()
 {
-    showAuxiliaryWindow();
-    s_auxiliaryWindow->setRootObject(mainWindow());
-
     initializeMods();
 }
 
@@ -181,7 +168,7 @@ void MainThreadHijacker::onSplashScreenCreated()
 
 void MainThreadHijacker::onMod2MenuItemClicked()
 {
-    showAuxiliaryWindow();
+    // FIXME: add the option to show auxiliary window
 }
 
 void MainThreadHijacker::onWindowCreated(QWindow *window)

@@ -1,37 +1,27 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
-#include <Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.h>
-#include <Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h>
-#include <MainThreadHijacker.h>
 #include <QObjectViewer/ObjectLocator/ObjectLocator.h>
 
-#include <QComboBox>
-#include <QDebug>
 #include <QDir>
 #include <QFileDialog>
 #include <QInputDialog>
-#include <QJSValue>
 #include <QMessageBox>
 #include <QPlainTextEdit>
-#include <QQmlComponent>
-#include <QQmlContext>
-#include <QQuickItem>
 #include <QSettings>
-#include <QThread>
-#include <QTimer>
+#include <QSortFilterProxyModel>
 
-static const char m_settingsGroupName[] = "AuxilliaryMainWindow";
+static const char m_settingsGroupName[] = "probemaestro.qt_inspector.gui.main_window";
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), m_windowChildrenTreeRootItem(QVariantList())
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
-    ui->WindowChildrenTreeView->setModel(&m_windowChildrenTreeModel);
+    ui->WindowChildrenTreeView->setHeaderHidden(true);
+    ui->WindowChildrenTreeView->setModel(&m_objectTreeModel);
     ui->WindowChildrenTreeView->setRootIndex(QModelIndex());
     ui->dockWidget3->setWidget(&m_qObjectViewer);
 
-    connect(&m_qObjectViewer, &QObjectViewer::currentObjectChanged, this, &MainWindow::onObjectViewerObjectChanged);
     connect(ui->WindowChildrenTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTreeViewSelectionChanged);
 
     // menu connections
@@ -39,17 +29,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->actionWindows->menu()->addAction(ui->dockWidget1->toggleViewAction());
     ui->actionWindows->menu()->addAction(ui->dockWidget3->toggleViewAction());
 
-    connect(ui->actionInvoke_action, &QAction::triggered, this, &MainWindow::onInvokeActionTriggered);
-    connect(ui->actionDebug_command_1, &QAction::triggered, this, &MainWindow::onDebugCommand1Triggered);
-    connect(ui->actionDebug_command_2, &QAction::triggered, this, &MainWindow::onDebugCommand2Triggered);
-    connect(ui->actionDebug_command_3, &QAction::triggered, this, &MainWindow::onDebugCommand3Triggered);
-    connect(ui->actionDebug_command_4, &QAction::triggered, this, &MainWindow::onDebugCommand4Triggered);
-    connect(ui->actionDebug_command_5, &QAction::triggered, this, &MainWindow::onDebugCommand5Triggered);
-    connect(ui->actionDebug_command_6, &QAction::triggered, this, &MainWindow::onDebugCommand6Triggered);
     connect(ui->actionExport_resource, &QAction::triggered, this, &MainWindow::onExportResourceTriggered);
     connect(ui->actionExport_all_resources, &QAction::triggered, this, &MainWindow::onExportAllResourcesTriggered);
-    connect(ui->actionList_all_available_actions, &QAction::triggered, this, &MainWindow::onListAllActionsTriggered);
     connect(ui->actionRefresh_hierarchy_view, &QAction::triggered, this, &MainWindow::onRefreshHeirarchyViewTriggered);
+    connect(this, &MainWindow::visibleChanged, this,
+            [this]()
+            {
+                //
+                m_objectTreeModel.refresh();
+            });
 
     loadWindowSettings();
 }
@@ -59,57 +47,23 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-QObject *MainWindow::rootObject()
-{
-    return m_windowChildrenTreeModel.rootObject();
-}
-
-void MainWindow::setRootObject(QObject *value)
-{
-    if (rootObject() == value)
-        return;
-
-    m_qObjectViewer.setCurrentObject(value);
-    m_windowChildrenTreeModel.setRootObject(value);
-}
-
 QObject *MainWindow::selectedObject()
 {
-    // Refer to:
-    // https://sl.bing.net/byG9N2EPR6W
+    const QModelIndex index = ui->WindowChildrenTreeView->currentIndex();
 
-    // Get a pointer to the selection model
-    QItemSelectionModel *selectionModel = ui->WindowChildrenTreeView->selectionModel();
-
-    // Get a list of selected indexes
-    QModelIndexList indexes = selectionModel->selectedIndexes();
-
-    // Check if there is any selected index
-    if (indexes.size() == 0)
+    if (!index.isValid())
         return nullptr;
 
-    // Get the first index in the list
-    QModelIndex selectedIndex = indexes.at(0);
+    // Handle proxy model if present
+    auto *proxy = qobject_cast<QSortFilterProxyModel *>(ui->WindowChildrenTreeView->model());
 
-    // Get a pointer to the item from the index
-    auto selectedItem = m_windowChildrenTreeModel.itemFromIndex(selectedIndex);
+    QModelIndex sourceIndex = proxy ? proxy->mapToSource(index) : index;
 
-    if (!selectedItem)
-        return nullptr;
-
-    return selectedItem->data(0).value<QObject *>();
+    return sourceIndex.data(ObjectTreeModel::ObjectRole).value<QObject *>();
 }
 
 void MainWindow::loadWindowSettings()
 {
-    //    // Refer to: https://sl.bing.net/expGAVYoO16
-    //    tabifyDockWidget(ui->dockWidget3, ui->dockWidget2);
-    //    // Refer to: https://sl.bing.net/h0i8BQ9NaKW
-    //    ui->dockWidget3->raise();
-
-    // Refer to:
-    // https://sl.bing.net/fE30ocPaj6a
-
     QSettings settings;
 
     settings.beginGroup(m_settingsGroupName);
@@ -122,9 +76,6 @@ void MainWindow::loadWindowSettings()
 
 void MainWindow::saveWindowSettings()
 {
-    // Refer to:
-    // https://sl.bing.net/fE30ocPaj6a
-
     QSettings settings;
 
     settings.beginGroup(m_settingsGroupName);
@@ -142,67 +93,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::onRefreshHeirarchyViewTriggered()
 {
-    // FIXME: fix the usage of raw pointers in WindowChildrenTreeItem class
-    QObject *rootObject = m_windowChildrenTreeModel.rootObject();
-
-    m_windowChildrenTreeModel.setRootObject(nullptr);
-    m_windowChildrenTreeModel.setRootObject(rootObject);
-}
-
-void MainWindow::onObjectViewerObjectChanged()
-{
-    //    m_propertyGrid.setObject(m_qObjectViewer.currentObject());
-    //    setRootObject(m_qObjectViewer.object());
-}
-
-void MainWindow::onObjectChanged()
-{
-    //    m_propertyGrid.setObject(selectedObject());
-    m_qObjectViewer.setCurrentObject(selectedObject());
-}
-
-void MainWindow::onInvokeActionTriggered()
-{
-    QString input = QInputDialog::getText(nullptr, "Invoke action", "Enter the name, qml id or the path of an action", QLineEdit::Normal).trimmed();
-
-    if (input.isEmpty())
-        return;
-
-    // Try to get action by id
-    QObject *selectedAction = ObjectLocator::getQmlObjectById(input);
-
-    // try to get it by path
-    if (!selectedAction)
-        selectedAction = ObjectLocator::getQmlObjectByPath(input);
-
-    // go and search for it in the allActions list
-    if (!selectedAction)
-    {
-    }
-
-    if (!selectedAction)
-    {
-        QMessageBox("Error", "Couldn't locate action: \"" + input + "\"", QMessageBox::Critical, QMessageBox::Ok, QMessageBox::NoButton,
-                    QMessageBox::NoButton)
-            .exec();
-
-        return;
-    }
-
-    bool result = true;
-
-    result &= selectedAction->setProperty("guard", false);
-    result &= selectedAction->setProperty("enabled", true);
-    result &= selectedAction->metaObject()->invokeMethod(selectedAction, "trigger");
-
-    if (!result)
-        QMessageBox("Error", "Couldn't invoke action: \"" + input + "\"", QMessageBox::Critical, QMessageBox::Ok, QMessageBox::NoButton,
-                    QMessageBox::NoButton)
-            .exec();
-}
-
-void MainWindow::onListAllActionsTriggered()
-{
+    m_objectTreeModel.refresh();
 }
 
 void MainWindow::onExportResourceTriggered()
@@ -293,56 +184,14 @@ void MainWindow::onExportAllResourcesTriggered()
     }
 }
 
-void MainWindow::onDebugCommand1Triggered()
-{
-}
-
-void MainWindow::onDebugCommand2Triggered()
-{
-    // create a QML object using (uri, versionMajor, versionMinor, qmlName)
-
-    auto createQmlObject = [](const QString &uri, int versionMajor, int versionMinor, const QString &qmlName)
-    {
-        QString qmlFileData = "import %1 %2.%3\n"
-                              "%4{}\n";
-
-        qmlFileData = qmlFileData.arg(uri);
-        qmlFileData = qmlFileData.arg(versionMajor);
-        qmlFileData = qmlFileData.arg(versionMinor);
-        qmlFileData = qmlFileData.arg(qmlName);
-
-        QQmlComponent component(MainThreadHijacker::mainWindowEngine());
-        component.setData(qmlFileData.toUtf8(), QUrl());
-
-        QObject *result = component.create();
-
-        if (result == nullptr || component.status() != QQmlComponent::Status::Ready)
-            qWarning() << component.errorString();
-
-        return result;
-    };
-
-    QObject *result = createQmlObject("UI.MaterialSelection", 1, 0, "MaterialSelectionManager");
-    m_qObjectViewer.setCurrentObject(result);
-}
-
-void MainWindow::onDebugCommand3Triggered()
-{
-}
-
-void MainWindow::onDebugCommand4Triggered()
-{
-}
-
-void MainWindow::onDebugCommand5Triggered()
-{
-}
-
-void MainWindow::onDebugCommand6Triggered()
-{
-}
-
 void MainWindow::onTreeViewSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
-    emit onObjectChanged();
+    m_qObjectViewer.setCurrentObject(selectedObject());
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+    QMainWindow::showEvent(event);
+
+    emit visibleChanged();
 }

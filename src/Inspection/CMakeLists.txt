@@ -1,6 +1,4 @@
-# to stop the aplication from running in the qt creator terminal,
-# goto Project>Run>Run in terminal
-# Refer to: https://sl.bing.net/c1K2xlXP1Hg
+cmake_minimum_required(VERSION 3.10)
 
 project(ProbeMaestro.QtInspector)
 
@@ -17,6 +15,8 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick Widgets REQUIRED)
 
 add_library(QtInspector SHARED
+    qml.qrc
+    main.cpp
     Exporters/IExporter.h
     Exporters/IExporter.cpp
     Exporters/QObjectToCppExporter.h
@@ -60,10 +60,6 @@ add_library(QtInspector SHARED
     QObjectViewer/PropertyEditors/QQmlListPropertyEditor.h
     QObjectViewer/PropertyEditors/QQmlListPropertyEditor_p.h
     QObjectViewer/PropertyEditors/QQmlListPropertyEditor.cpp
-    WindowChildrenTreeModel/WindowChildrenTreeItem.h
-    WindowChildrenTreeModel/WindowChildrenTreeItem.cpp
-    WindowChildrenTreeModel/WindowChildrenTreeModel.h
-    WindowChildrenTreeModel/WindowChildrenTreeModel.cpp
     MemoryMaps/MemoryMap.h
     MemoryMaps/MemoryMap_p.h
     MemoryMaps/MemoryMap.cpp
@@ -85,11 +81,11 @@ add_library(QtInspector SHARED
     Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.cpp
     Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.h
     Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.cpp
-    qml.qrc
     QtInspector.cpp
     QtInspector.h
-    main.cpp
     compat_Qt.h
+    ObjectTreeModel.h
+    ObjectTreeModel.cpp
 )
 
 target_link_libraries(QtInspector
