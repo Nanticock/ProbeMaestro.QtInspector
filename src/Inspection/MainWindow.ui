@@ -48,15 +48,7 @@
     </property>
     <addaction name="actionExport_resource"/>
     <addaction name="actionExport_all_resources"/>
-    <addaction name="actionInvoke_action"/>
-    <addaction name="actionList_all_available_actions"/>
     <addaction name="separator"/>
-    <addaction name="actionDebug_command_1"/>
-    <addaction name="actionDebug_command_2"/>
-    <addaction name="actionDebug_command_3"/>
-    <addaction name="actionDebug_command_4"/>
-    <addaction name="actionDebug_command_5"/>
-    <addaction name="actionDebug_command_6"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuFiew"/>
@@ -95,31 +87,6 @@
   <action name="actionRefresh_properties">
    <property name="text">
     <string>Refresh properties</string>
-   </property>
-  </action>
-  <action name="actionDebug_command_1">
-   <property name="text">
-    <string>Debug command 1</string>
-   </property>
-  </action>
-  <action name="actionDebug_command_2">
-   <property name="text">
-    <string>Debug command 2</string>
-   </property>
-  </action>
-  <action name="actionDebug_command_3">
-   <property name="text">
-    <string>Debug command 3</string>
-   </property>
-  </action>
-  <action name="actionDebug_command_4">
-   <property name="text">
-    <string>Debug command 4</string>
-   </property>
-  </action>
-  <action name="actionDebug_command_5">
-   <property name="text">
-    <string>Debug command 5</string>
    </property>
   </action>
   <action name="actionHerarchy_view">
@@ -163,21 +130,6 @@
   <action name="actionExport_all_resources">
    <property name="text">
     <string>Export all resources</string>
-   </property>
-  </action>
-  <action name="actionInvoke_action">
-   <property name="text">
-    <string>Invoke action</string>
-   </property>
-  </action>
-  <action name="actionList_all_available_actions">
-   <property name="text">
-    <string>List all available actions</string>
-   </property>
-  </action>
-  <action name="actionDebug_command_6">
-   <property name="text">
-    <string>Debug command 6</string>
    </property>
   </action>
   <action name="actionExport_resource">
