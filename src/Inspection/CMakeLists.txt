@@ -32,8 +32,6 @@ add_library(QtInspector SHARED
     QObjectViewer/QObjectViewer.h
     QObjectViewer/QObjectViewer.cpp
     UndoRedoStack/UndoRedoStack.hpp
-    QObjectViewer/RTTIHelper/RTTIHelper.h
-    QObjectViewer/RTTIHelper/rttiTraversalExample_msvc.cpp
     QObjectViewer/PropertyEditors/IPropertyEditor.h
     QObjectViewer/PropertyEditors/IPropertyEditor_p.h
     QObjectViewer/PropertyEditors/IPropertyEditor.cpp
@@ -72,14 +70,10 @@ add_library(QtInspector SHARED
     QObjectViewer/ObjectLocator/ObjectLocator.cpp
     QObjectViewer/ObjectLocator/CacheRepo.h
     QObjectViewer/ObjectLocator/CacheRepo.cpp
-    Core/SemVer.h
-    Core/CompilerInfo.h
     Compat/MemoryMaps/MemoryMap.h
     Compat/MemoryMaps/MemoryMap.cpp
     Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.h
     Compat/MemoryMaps/ObjectsMemoryMap/QtObjectsMemoryMap.cpp
-    Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.h
-    Compat/MemoryMaps/FunctionsMemoryMaps/FunctionsMemoryMap.cpp
     QtInspector.cpp
     QtInspector.h
     compat_Qt.h

@@ -11,6 +11,5 @@
         <file>resources/icons/save_icon.svg</file>
         <file>resources/icons/export-header.svg</file>
         <file>resources/icons/qrc-file-icon.svg</file>
-        <file>resources/icons/ProbeMaestro_icon.png</file>
     </qresource>
 </RCC>
