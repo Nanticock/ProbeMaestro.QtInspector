@@ -85,6 +85,8 @@ add_library(QtInspector SHARED
     compat_Qt.h
     ObjectTreeModel.h
     ObjectTreeModel.cpp
+    ShortcutManager.h
+    ShortcutManager.cpp
 )
 
 target_link_libraries(QtInspector

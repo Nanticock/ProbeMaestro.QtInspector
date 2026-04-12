@@ -5,6 +5,7 @@
 #include "QObjectViewer/QObjectViewer.h"
 
 #include <QItemSelection>
+#include <QKeySequence>
 #include <QMainWindow>
 
 namespace Ui
@@ -21,6 +22,7 @@ public:
     ~MainWindow();
 
     QObject *selectedObject();
+    QKeySequence globalDisplayKeySequence() const;
 
 private:
     void loadWindowSettings();
@@ -38,7 +40,7 @@ public slots:
     void onTreeViewSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
 protected:
-    void showEvent(QShowEvent* event) override;
+    void showEvent(QShowEvent *event) override;
 
 private:
     Ui::MainWindow *ui;

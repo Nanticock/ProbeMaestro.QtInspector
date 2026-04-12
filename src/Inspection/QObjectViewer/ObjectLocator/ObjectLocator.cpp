@@ -92,7 +92,7 @@ bool ObjectLocator::indexAllAvailablePointers()
 
     QList<QQuickWindow *> qmlWindows = getQmlWindows();
 
-    for (QQuickWindow *window : qmlWindows)
+    for (QQuickWindow *window : qAsConst(qmlWindows))
         indexAllAvailablePointers(window);
 
     return true;
@@ -449,7 +449,7 @@ QObject *ObjectLocator::getQmlObjectByPath(const QString &path)
 
     QList<QQuickWindow *> qmlWindows = getQmlWindows(rootObjectName);
 
-    for (QQuickWindow *window : qmlWindows)
+    for (QQuickWindow *window : qAsConst(qmlWindows))
     {
         QObject *result = getQmlObjectByPath(remainingPath, window);
 
@@ -477,7 +477,7 @@ QObject *ObjectLocator::getQmlObjectByPath(const QString &path, QQmlContext *con
     if (remainingPath.isEmpty())
         return qmlWindows.first();
 
-    for (QQuickWindow *window : qmlWindows)
+    for (QQuickWindow *window : qAsConst(qmlWindows))
     {
         QObject *result = getQmlObjectByPath(remainingPath, window, context);
 
@@ -665,7 +665,7 @@ QObject *ObjectLocator::getQmlObjectById(const QString &id)
 
     QWindowList allWindows = QApplication::allWindows();
 
-    for (QWindow *window : allWindows)
+    for (QWindow *window : qAsConst(allWindows))
     {
         QObject *object = getQmlObjectById(id, window);
 
@@ -731,7 +731,7 @@ QList<QQuickWindow *> ObjectLocator::getQmlWindows(const QString &nameFilter, co
     QList<QQuickWindow *> result;
 
     QWindowList allWindows = QApplication::allWindows();
-    for (QWindow *window : allWindows)
+    for (QWindow *window : qAsConst(allWindows))
     {
         QQuickWindow *qmlWindow = dynamic_cast<QQuickWindow *>(window);
 

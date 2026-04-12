@@ -20,14 +20,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->WindowChildrenTreeView->setHeaderHidden(true);
     ui->WindowChildrenTreeView->setModel(&m_objectTreeModel);
     ui->WindowChildrenTreeView->setRootIndex(QModelIndex());
-    ui->dockWidget3->setWidget(&m_qObjectViewer);
+    ui->dockWidget2->setWidget(&m_qObjectViewer);
 
     connect(ui->WindowChildrenTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTreeViewSelectionChanged);
 
     // menu connections
     ui->actionWindows->setMenu(new QMenu());
     ui->actionWindows->menu()->addAction(ui->dockWidget1->toggleViewAction());
-    ui->actionWindows->menu()->addAction(ui->dockWidget3->toggleViewAction());
+    ui->actionWindows->menu()->addAction(ui->dockWidget2->toggleViewAction());
 
     connect(ui->actionExport_resource, &QAction::triggered, this, &MainWindow::onExportResourceTriggered);
     connect(ui->actionExport_all_resources, &QAction::triggered, this, &MainWindow::onExportAllResourcesTriggered);
@@ -60,6 +60,13 @@ QObject *MainWindow::selectedObject()
     QModelIndex sourceIndex = proxy ? proxy->mapToSource(index) : index;
 
     return sourceIndex.data(ObjectTreeModel::ObjectRole).value<QObject *>();
+}
+
+QKeySequence MainWindow::globalDisplayKeySequence() const
+{
+    static const QKeySequence result(Qt::CTRL + Qt::ALT + Qt::Key_Q);
+
+    return result;
 }
 
 void MainWindow::loadWindowSettings()
