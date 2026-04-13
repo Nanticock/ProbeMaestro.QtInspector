@@ -377,7 +377,7 @@ void QObjectViewer::showSearchWindow(const QString &defaultValue)
             messageBox.setStandardButtons(QMessageBox::NoButton);
 
             QString detailedText = input + ":\n";
-            for (QObject *object : searchResult)
+            for (QObject *object : PM::internal::qAsConst(searchResult))
                 detailedText += QString("0x%1\n").arg(size_t(object), 0, 16);
 
             messageBox.setDetailedText(detailedText);
@@ -969,6 +969,8 @@ void QObjectViewer::updatePropertiesItem()
 
             // Create a child item for the property
             QSharedPointer<IPropertyEditor> propertyEditor = getPropertyEditorForProperty(metaProperty);
+
+            qInfo() << metaProperty.name() << propertyEditor->name();
             propertyEditor->createPropertyTreeItem(metaProperty, this, &m_propertiesItem);
         }
     }
@@ -1098,10 +1100,6 @@ void QObjectViewer::onCurrentMetaObjectChanged()
         topLevelItemsExpandedStates[i] = currentTopLevelItem->isExpanded();
         currentTopLevelItem->setExpanded(false);
     }
-
-    // Refer to:
-    // https://sl.bing.net/dhJxCXViHoi
-    // https://sl.bing.net/eAhRuFehyG4
 
     updateObjectItem();
     updateMetaTypeItem();

@@ -47,10 +47,12 @@ QTreeWidgetItem *PointerPropertyEditor::createPropertyTreeItem(const PropertyDat
         gotoButton->setEnabled(isQObject);
 
         // if this is a QObject, set its type name to the QMetaObject class name
-        typeName = isQObject ? propertyValue.value<QObject *>()->metaObject()->className() : typeName;
+        QObject *valueAsQObject = propertyValue.value<QObject *>();
+        if (isQObject && valueAsQObject != nullptr)
+            typeName = valueAsQObject->metaObject()->className();
 
         if (isQObject)
-            pointerAddress = pointerAddress.arg(qulonglong(propertyValue.value<QObject *>()), 0, 16);
+            pointerAddress = pointerAddress.arg(qulonglong(valueAsQObject), 0, 16);
         else
             pointerAddress = pointerAddress.arg(qulonglong(propertyValue.data()), 0, 16);
     }
