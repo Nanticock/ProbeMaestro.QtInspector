@@ -61,7 +61,7 @@ QObject *MainWindow::selectedObject()
 
 QKeySequence MainWindow::globalDisplayKeySequence() const
 {
-    static const QKeySequence result(Qt::CTRL + Qt::ALT + Qt::Key_Q);
+    static const QKeySequence result(Qt::CTRL, Qt::ALT, Qt::Key_Q);
 
     return result;
 }

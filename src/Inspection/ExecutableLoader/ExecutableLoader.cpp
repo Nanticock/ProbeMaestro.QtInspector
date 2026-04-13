@@ -380,7 +380,7 @@ ExecutableLoaderData::ExeEntryPointFunction internal::getModuleEntryPoint(void *
     // TODO: replace this default method
 
     // Get the address of _exe_Main_ by ordinal
-    return ExecutableLoader::ExeEntryPointFunction(GetProcAddress(HMODULE(moduleHandle), MAKEINTRESOURCE(1)));
+    return ExecutableLoader::ExeEntryPointFunction(::GetProcAddress(HMODULE(moduleHandle), MAKEINTRESOURCEA(1)));
 }
 
 std::wstring internal::getModuleName(void *moduleHandle)

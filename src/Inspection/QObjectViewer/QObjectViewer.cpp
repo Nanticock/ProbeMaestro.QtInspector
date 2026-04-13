@@ -403,43 +403,44 @@ void QObjectViewer::initToolbar()
     m_centralWidget.addWidget(&m_toolbar);
 
     // gotoPreviousObjectAction
-    m_gotoPreviousObjectAction =
-        m_toolbar.addAction(QIcon(":/resources/icons/previous-icon-blue.svg"), "Previous", this, [this]() { gotoPreviousObject(); });
+    m_gotoPreviousObjectAction = PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/previous-icon-blue.svg"), "Previous", &m_toolbar,
+                                                         [this]() { gotoPreviousObject(); });
     m_gotoPreviousObjectAction->setEnabled(false);
 
     // gotoNextObjectAction
-    m_gotoNextObjectAction = m_toolbar.addAction(QIcon(":/resources/icons/next-icon-blue.svg"), "Next", this, [this]() { gotoNextObject(); });
+    m_gotoNextObjectAction =
+        PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/next-icon-blue.svg"), "Next", &m_toolbar, [this]() { gotoNextObject(); });
     m_gotoNextObjectAction->setEnabled(false);
 
     // refreshAction
-    m_refreshAction = m_toolbar.addAction(QIcon(":/resources/icons/refresh_icon.svg"), "Refresh", this, [this]() { refresh(); });
+    m_refreshAction =
+        PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/refresh_icon.svg"), "Refresh", &m_toolbar, [this]() { refresh(); });
     m_refreshAction->setEnabled(false);
 
     // gotoParentAction
-    m_gotoParentAction = m_toolbar.addAction(QIcon(":/resources/icons/goto-parent-icon-black.svg"), "Goto parent", this, [this]() { gotoParent(); });
+    m_gotoParentAction = PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/goto-parent-icon-black.svg"), "Goto parent", &m_toolbar,
+                                                 [this]() { gotoParent(); });
     m_gotoParentAction->setEnabled(false);
 
     // gotoSuperClassAction
-    m_gotoSuperClassAction =
-        m_toolbar.addAction(QIcon(":/resources/icons/goto-super-class-icon-red-black.svg"), "Goto super-class", this, [this]() { gotoSuperClass(); });
+    m_gotoSuperClassAction = PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/goto-super-class-icon-red-black.svg"), "Goto super-class",
+                                                     &m_toolbar, [this]() { gotoSuperClass(); });
     m_gotoSuperClassAction->setEnabled(false);
 
     m_toolbar.addSeparator();
 
-    m_toolbar.addAction("Goto", this, &QObjectViewer::onGotoTriggered);
-    m_searchAction = m_toolbar.addAction(QIcon(":/resources/icons/search-icon-black.svg"), "Search", this, &QObjectViewer::onSearchTriggered);
+    PM::internal::addAction(&m_toolbar, "Goto", &m_toolbar, [this]() { onGotoTriggered(); });
+    m_searchAction = PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/search-icon-black.svg"), "Search", &m_toolbar,
+                                             [this]() { onSearchTriggered(); });
 
     m_toolbar.addSeparator();
 
     // saveHeaderAction
-    m_saveHeaderAction = m_toolbar.addAction(QIcon(":/resources/icons/export-header.svg"), "Save header file", this, [this]() { saveHeader(); });
+    m_saveHeaderAction =
+        PM::internal::addAction(&m_toolbar, QIcon(":/resources/icons/export-header.svg"), "Save header file", &m_toolbar, [this]() { saveHeader(); });
     m_saveHeaderAction->setEnabled(false);
 }
 
-// Refer to:
-// https://sl.bing.net/iHYGxNWyVDE
-// https://sl.bing.net/dcyrvOEhFaC
-// https://sl.bing.net/bbNKcPe4tye
 void QObjectViewer::initSearchBox()
 {
     // Create a line edit for searching
@@ -969,8 +970,6 @@ void QObjectViewer::updatePropertiesItem()
 
             // Create a child item for the property
             QSharedPointer<IPropertyEditor> propertyEditor = getPropertyEditorForProperty(metaProperty);
-
-            qInfo() << metaProperty.name() << propertyEditor->name();
             propertyEditor->createPropertyTreeItem(metaProperty, this, &m_propertiesItem);
         }
     }

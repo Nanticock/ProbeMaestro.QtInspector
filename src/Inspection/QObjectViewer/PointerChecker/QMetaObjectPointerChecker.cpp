@@ -60,7 +60,7 @@ bool QMetaObjectPointerChecker::performAdvancedChecks() const
         // =========================
         // Qt 5.15+ safe assumption
         // =========================
-        const QMetaObject * const *array = d.relatedMetaObjects;
+        const SuperData *array = d.relatedMetaObjects;
 
         if (array[0] && !isReadableAddress(array[0]))
             return false;

@@ -1,11 +1,15 @@
 #ifndef COMPAT_QT_H
 #define COMPAT_QT_H
 
+#include <QAction>
 #include <QFontMetrics>
 #include <QKeySequence>
 #include <QMetaEnum>
 #include <QMetaType>
+#include <QToolBar>
 #include <QVector>
+
+#include <functional>
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 5, 0)
 #define qInfo qDebug
@@ -174,6 +178,9 @@ namespace internal
         return false;
 #endif
     }
+
+    QAction *addAction(QToolBar *toolbar, const QString &text, const QObject *receiver, const std::function<void()> &callback);
+    QAction *addAction(QToolBar *toolbar, const QIcon &icon, const QString &text, const QObject *receiver, const std::function<void()> &callback);
 } // namespace internal
 } // namespace PM
 
