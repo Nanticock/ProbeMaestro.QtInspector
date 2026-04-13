@@ -1,6 +1,7 @@
 #include "ExecutableLoader.h"
 #include "ExecutableLoader_p.h"
 
+#include <cwctype>
 #include <iostream>
 #include <thread>
 
@@ -325,12 +326,16 @@ std::wstring internal::trimString(const std::wstring &input)
     std::wstring s = input;
 
     // Left trim (remove leading whitespace)
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](wchar_t ch) { return !iswspace(ch); }));
+    size_t start = 0;
+    while (start < s.size() && iswspace(s[start]))
+        ++start;
 
     // Right trim (remove trailing whitespace)
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](wchar_t ch) { return !iswspace(ch); }).base(), s.end());
+    size_t end = s.size();
+    while (end > start && iswspace(s[end - 1]))
+        --end;
 
-    return s;
+    return s.substr(start, end - start);
 }
 
 std::string internal::trimString(const std::string &input)

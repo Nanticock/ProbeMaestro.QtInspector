@@ -1,6 +1,8 @@
 #ifndef COMPAT_QT_H
 #define COMPAT_QT_H
 
+#include <QFontMetrics>
+#include <QMetaEnum>
 #include <QMetaType>
 #include <QVector>
 
@@ -16,8 +18,16 @@ namespace internal
         // NOTE: An ugly hack for old versions of qt that didn't have the id() member function
         struct QMetaTypeData
         {
-            QMetaType::TypedConstructor m_typedConstructor;
-            QMetaType::TypedDestructor m_typedDestructor;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+            using TypedConstructor = QMetaType::TypedConstructor;
+            using TypedDestructor = QMetaType::TypedDestructor;
+#else
+            using TypedConstructor = QMetaType::Creator;
+            using TypedDestructor = QMetaType::Deleter;
+#endif
+
+            TypedConstructor m_typedConstructor;
+            TypedDestructor m_typedDestructor;
             QMetaType::SaveOperator m_saveOp;
             QMetaType::LoadOperator m_loadOp;
             QMetaType::Constructor m_constructor;
@@ -91,6 +101,24 @@ namespace internal
             result.append(*first);
 
         return result;
+#endif
+    }
+
+    inline bool isScopedEnum(const QMetaEnum &metaEnum)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+        return metaEnum.isScoped();
+#else
+        return false;
+#endif
+    }
+
+    inline int fontMetricsHorizontalAdvance(const QFontMetrics &fontMetrics, const QString &text)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+        return fontMetrics.horizontalAdvance(text);
+#else
+        return fontMetrics.width(text);
 #endif
     }
 } // namespace internal

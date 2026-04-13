@@ -43,11 +43,7 @@ void ObjectLocator::enableCaching(bool value)
 
 bool ObjectLocator::isValidQmlId(const QString &id)
 {
-    // Refer to:
-    // https://sl.bing.net/c3QqPysjXeS
-
-    // Define a regular expression that matches valid QML ids
-    QRegularExpression re("^[_a-z][_a-zA-Z0-9]*$");
+    static const QRegularExpression re("^[_a-z][_a-zA-Z0-9]*$");
     // Check if the input matches the regular expression
     return re.match(id).hasMatch();
 }
@@ -693,10 +689,6 @@ QObject *ObjectLocator::getQmlObjectById(const QString &id, QObject *rootObject)
 
 QObject *ObjectLocator::getQmlObjectById(const QString &id, QQmlContext *context)
 {
-    // get a QML object by its id
-    //
-    // Refer to: https://sl.bing.net/b4Q0J8RqwzQ
-
     if (context == nullptr)
         return nullptr;
 
@@ -784,12 +776,17 @@ QObject *ObjectLocator::getQmlSingleton(const QString &uri, int versionMajor, in
     if (engine == nullptr)
         return nullptr;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     int typeId = qmlTypeId(uri.toStdString().c_str(), 1, 0, qmlName.toStdString().c_str());
 
     if (typeId == -1)
         return nullptr;
 
     return engine->singletonInstance<QObject *>(typeId);
+#else
+    // FIXME: Find a way to implement this in old Qt versions
+    return nullptr;
+#endif
 }
 
 QMetaMethod ObjectLocator::getMetaMethodByName(const QObject *object, const QString &methodName)

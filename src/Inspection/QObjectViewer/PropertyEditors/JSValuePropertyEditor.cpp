@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QDialog>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QPushButton>
@@ -39,14 +40,15 @@ QTreeWidgetItem *JSValuePropertyEditor::createPropertyTreeItem(const PropertyDat
     gotoButton->setText("...");
     gotoButton->setEnabled(!(jsValue.isNull() || jsValue.isError()));
     gotoButton->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum));
-    gotoButton->setMaximumWidth(std::max(QApplication::fontMetrics().horizontalAdvance(gotoButton->text()), 20));
+    const int gotoButtonTextWidth = PM::internal::fontMetricsHorizontalAdvance(QApplication::fontMetrics(), gotoButton->text());
+    gotoButton->setMaximumWidth(std::max(gotoButtonTextWidth, 20));
 
     QObject::connect(gotoButton, &QPushButton::clicked, gotoButton,
                      [jsValue, this, propertyData, parentObjectViewer]() { showDetailsDialog(parentObjectViewer, jsValue, propertyData); });
 
     // create the itemLabel
     QLabel *itemLabel = new QLabel();
-    itemLabel->setFont(QFont("", -1, QFont::Thin, true));
+    itemLabel->setFont(QFont("", -1, QFont::Weight::Light, true));
     itemLabel->setText(QString("QJSValue(%1)").arg(jsValue.toVariant().typeName()));
     itemLabel->setSelection(0, 10);
     itemLabel->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum));
@@ -101,7 +103,9 @@ bool JSValuePropertyEditor::showDetailsDialog(QObjectViewer *parentObjectViewer,
     createNewAttribute("isNull", value.isNull(), propertiesItem);
     createNewAttribute("isNumber", value.isNumber(), propertiesItem);
     createNewAttribute("isObject", value.isObject(), propertiesItem);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
     createNewAttribute("isQMetaObject", value.isQMetaObject(), propertiesItem);
+#endif
     createNewAttribute("isQObject", value.isQObject(), propertiesItem);
     createNewAttribute("isRegExp", value.isRegExp(), propertiesItem);
     createNewAttribute("isString", value.isString(), propertiesItem);

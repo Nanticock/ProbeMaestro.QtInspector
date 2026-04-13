@@ -31,7 +31,8 @@ QTreeWidgetItem *ColorPropertyEditor::createPropertyTreeItem(const PropertyData 
     editColorButton->setText("...");
     editColorButton->setEnabled(propertyData.isWritable && parentObjectViewer != nullptr);
     editColorButton->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum));
-    editColorButton->setMaximumWidth(std::max(QApplication::fontMetrics().horizontalAdvance(editColorButton->text()), 20));
+    const int editButtonTextWidth = PM::internal::fontMetricsHorizontalAdvance(QApplication::fontMetrics(), editColorButton->text());
+    editColorButton->setMaximumWidth(std::max(editButtonTextWidth, 20));
 
     QColor value = propertyValue.value<QColor>();
 

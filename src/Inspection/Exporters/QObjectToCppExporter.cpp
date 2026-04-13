@@ -1,6 +1,8 @@
 #include "QObjectToCppExporter.h"
 #include "QObjectToCppExporter_p.h"
 
+#include <compat_Qt.h>
+
 #include <QDebug>
 #include <QDir>
 #include <QMetaEnum>
@@ -123,13 +125,14 @@ QString QObjectToCppExporterPrivate::generateEnum(const QMetaEnum &_enum)
 
     result = result.replace(ENUM_TEMPLATE_NAMESPACE_BODY_KEY, "\t" + body.trimmed());
 
-    if (!_enum.isScoped())
+    const bool isScopedEnum = PM::internal::isScopedEnum(_enum);
+    if (!isScopedEnum)
         result += QString("Q_ENUM(%1)\n").arg(_enum.name());
     else
         result += QString("Q_ENUM_NS(%1)\n").arg(_enum.name());
 
     if (_enum.isFlag())
-        result += QString(_enum.isScoped() ? "Q_FLAG_NS(%1)\n" : "Q_FLAG(%1)\n").arg(_enum.name());
+        result += QString(isScopedEnum ? "Q_FLAG_NS(%1)\n" : "Q_FLAG(%1)\n").arg(_enum.name());
 
     return result;
 }

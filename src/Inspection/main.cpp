@@ -5,6 +5,8 @@
 #include "QtInspector.h"
 
 #include <QCoreApplication>
+#include <QMetaObject>
+#include <QObject>
 
 #include <thread>
 
@@ -12,6 +14,20 @@
 
 void processAttached();
 void processDetached();
+
+DWORD WINAPI QtWorkerThread(LPVOID);
+DWORD WINAPI WorkItemCallback(LPVOID);
+
+class QtInspectorInvoker : public QObject
+{
+    Q_OBJECT
+
+public slots:
+    void invoke()
+    {
+        PM::initializeQtInspector();
+    }
+};
 
 class ModuleLifetimeInterceptor
 {
@@ -23,14 +39,7 @@ class ModuleLifetimeInterceptor
         //          We can queue a function to the thread pool from `DllMain`, which avoids creating a thread directly
         //          This is generally safe because the thread pool handles the threading behind the scenes.
         //
-        QueueUserWorkItem(
-            [](LPVOID)
-            {
-                processAttached();
-
-                return DWORD(0);
-            },
-            nullptr, WT_EXECUTEDEFAULT);
+        QueueUserWorkItem(WorkItemCallback, nullptr, WT_EXECUTEDEFAULT);
     }
 
     ~ModuleLifetimeInterceptor()
@@ -44,12 +53,27 @@ private:
 
 ModuleLifetimeInterceptor ModuleLifetimeInterceptor::s_instance;
 
+DWORD WINAPI WorkItemCallback(LPVOID)
+{
+    processAttached();
+    return DWORD(0);
+}
+
 void waitForQtWorker()
 {
     while (QCoreApplication::instance() == nullptr)
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    QMetaObject::invokeMethod(QCoreApplication::instance(), PM::initializeQtInspector);
+    QtInspectorInvoker *invoker = new QtInspectorInvoker();
+    invoker->moveToThread(QCoreApplication::instance()->thread());
+
+    QMetaObject::invokeMethod(invoker, "invoke", Qt::QueuedConnection);
+}
+
+DWORD WINAPI QtWorkerThread(LPVOID)
+{
+    waitForQtWorker();
+    return DWORD(0);
 }
 
 void processAttached()
@@ -66,7 +90,7 @@ void processAttached()
     //       So we let the OS take care of such long running thread instead
     //
 
-    ::CreateThread(nullptr, 0, LPTHREAD_START_ROUTINE(waitForQtWorker), nullptr, 0, nullptr);
+    ::CreateThread(nullptr, 0, QtWorkerThread, nullptr, 0, nullptr);
 }
 
 void processDetached()
@@ -78,3 +102,5 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 {
     return true;
 }
+
+#include "main.moc"

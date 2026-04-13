@@ -7,6 +7,7 @@
 
 #include <QApplication>
 #include <QDialog>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QPushButton>
@@ -33,14 +34,15 @@ QTreeWidgetItem *VariantMapPropertyEditor::createPropertyTreeItem(const Property
     gotoButton->setText("...");
     gotoButton->setEnabled(!variantMap.isEmpty());
     gotoButton->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum));
-    gotoButton->setMaximumWidth(std::max(QApplication::fontMetrics().horizontalAdvance(gotoButton->text()), 20));
+    const int gotoTextWidth = PM::internal::fontMetricsHorizontalAdvance(QApplication::fontMetrics(), gotoButton->text());
+    gotoButton->setMaximumWidth(std::max(gotoTextWidth, 20));
 
     QObject::connect(gotoButton, &QPushButton::clicked, gotoButton,
                      [variantMap, this, propertyData, parentObjectViewer]() { showListDialog(propertyData, parentObjectViewer, variantMap); });
 
     // create the itemLabel
     QLabel *itemLabel = new QLabel();
-    itemLabel->setFont(QFont("", -1, QFont::Thin, true));
+    itemLabel->setFont(QFont("", -1, QFont::Normal, true));
     itemLabel->setText(QString("[Length = %1]").arg(variantMap.count()));
     itemLabel->setSelection(0, 10);
     itemLabel->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum));

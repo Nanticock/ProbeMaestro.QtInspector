@@ -35,10 +35,10 @@ public:
 
 public:
     static bool addAddress(const std::string &name, size_t address, const std::wstring &moduleName = placeholder::currentModuleName(),
-                           const tags_t &tags = {});
+                           const tags_t &tags = tags_t());
     template <typename T>
     static bool addAddress(const std::string &name, const T *address, const std::wstring &moduleName = placeholder::currentModuleName(),
-                           const tags_t &tags = {});
+                           const tags_t &tags = tags_t());
 
     template <typename T>
     static T getAddress(const std::string &name);

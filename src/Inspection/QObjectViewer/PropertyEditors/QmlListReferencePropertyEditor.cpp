@@ -37,7 +37,8 @@ QTreeWidgetItem *QmlListReferencePropertyEditor::createPropertyTreeItem(const Pr
     gotoButton->setText("...");
     gotoButton->setEnabled(qmlListReference.count() > 0);
     gotoButton->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum));
-    gotoButton->setMaximumWidth(std::max(QApplication::fontMetrics().horizontalAdvance(gotoButton->text()), 20));
+    const int gotoTextWidth = PM::internal::fontMetricsHorizontalAdvance(QApplication::fontMetrics(), gotoButton->text());
+    gotoButton->setMaximumWidth(std::max(gotoTextWidth, 20));
 
     // create the itemLabel
     QLabel *itemLabel = new QLabel();
