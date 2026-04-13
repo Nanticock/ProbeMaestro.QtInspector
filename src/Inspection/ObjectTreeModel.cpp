@@ -7,7 +7,9 @@
 #include <QWidget>
 #include <QWindow>
 
-ObjectTreeModel::ObjectTreeModel(QObject *parent) : QAbstractItemModel(parent), m_root(std::make_unique<ObjectNode>())
+#include <memory>
+
+ObjectTreeModel::ObjectTreeModel(QObject *parent) : QAbstractItemModel(parent), m_root(std::unique_ptr<ObjectNode>(new ObjectNode()))
 {
 }
 
@@ -23,7 +25,7 @@ void ObjectTreeModel::refresh()
     const auto widgets = QApplication::topLevelWidgets();
     for (QWidget *w : widgets)
     {
-        auto node = std::make_unique<ObjectNode>();
+        auto node = std::unique_ptr<ObjectNode>(new ObjectNode());
         node->object = w;
         node->parent = m_root.get();
         node->fetched = false;
@@ -39,7 +41,7 @@ void ObjectTreeModel::refresh()
         if (w->parent())
             continue;
 
-        auto node = std::make_unique<ObjectNode>();
+        auto node = std::unique_ptr<ObjectNode>(new ObjectNode());
         node->object = w;
         node->parent = m_root.get();
         node->fetched = false;
@@ -87,7 +89,7 @@ void ObjectTreeModel::fetchMore(const QModelIndex &parent)
 
     for (QObject *child : children)
     {
-        auto childNode = std::make_unique<ObjectNode>();
+        auto childNode = std::unique_ptr<ObjectNode>(new ObjectNode());
         childNode->object = child;
         childNode->parent = node;
         childNode->fetched = false;

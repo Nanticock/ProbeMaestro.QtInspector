@@ -19,7 +19,7 @@ bool PointerPropertyEditor::canHandleType(const QMetaType &type) const
     if (!propertyTypeMetaObject)
         return false;
 
-    return propertyTypeMetaObject->inherits(&QObject::staticMetaObject);
+    return PM::internal::qMetaObjectInherits(propertyTypeMetaObject, &QObject::staticMetaObject);
 }
 
 QTreeWidgetItem *PointerPropertyEditor::createPropertyTreeItem(const PropertyData &propertyData, QTreeWidget &parentTreeWidget,

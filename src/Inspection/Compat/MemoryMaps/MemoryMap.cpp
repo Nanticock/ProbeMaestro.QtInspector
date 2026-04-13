@@ -1,6 +1,7 @@
 #include "MemoryMap.h"
 
 #include <ExecutableLoader/ExecutableLoader_p.h>
+#include <compat_Qt.h>
 
 #include <QSet>
 
@@ -15,13 +16,13 @@ using namespace Compat;
 
 void MemoryMap::init()
 {
-    for (auto memoryMap : qAsConst(s_registeredMaps))
+    for (auto memoryMap : PM::internal::qAsConst(s_registeredMaps))
         memoryMap->initialize();
 }
 
 void MemoryMap::deinit()
 {
-    for (auto memoryMap : qAsConst(s_registeredMaps))
+    for (auto memoryMap : PM::internal::qAsConst(s_registeredMaps))
         memoryMap->initialize();
 }
 

@@ -1,5 +1,7 @@
 #include "ShortcutManager.h"
 
+#include <compat_Qt.h>
+
 #include <QKeyEvent>
 
 using namespace PM::QtInspector;

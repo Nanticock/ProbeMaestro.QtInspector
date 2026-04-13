@@ -5,6 +5,8 @@
 #include <QKeySequence>
 #include <QSet>
 
+#include <functional>
+
 namespace PM
 {
 namespace QtInspector

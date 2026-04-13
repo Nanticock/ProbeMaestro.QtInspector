@@ -2,14 +2,38 @@
 #define COMPAT_QT_H
 
 #include <QFontMetrics>
+#include <QKeySequence>
 #include <QMetaEnum>
 #include <QMetaType>
 #include <QVector>
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 5, 0)
+#define qInfo qDebug
+#endif
 
 namespace PM
 {
 namespace internal
 {
+    namespace QtPrivate
+    {
+        template <typename T>
+        struct QAddConst
+        {
+            typedef const T Type;
+        };
+    } // namespace QtPrivate
+
+    // this adds const to non-const objects (like std::as_const)
+    template <typename T>
+    inline typename QtPrivate::QAddConst<T>::Type &qAsConst(T &t)
+    {
+        return t;
+    }
+    // prevent rvalue arguments:
+    template <typename T>
+    void qAsConst(const T &&) = delete;
+
     inline int getMetaTypeId(const QMetaType &type)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
@@ -121,7 +145,37 @@ namespace internal
         return fontMetrics.width(text);
 #endif
     }
+
+    inline bool qMetaObjectInherits(const QMetaObject *metaObject, const QMetaObject *baseMetaObject)
+    {
+        if (metaObject == nullptr || baseMetaObject == nullptr)
+            return false;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
+        return metaObject->inherits(baseMetaObject);
+#else
+        // Manual inheritance check for older Qt versions
+        const QMetaObject *mo = metaObject;
+
+        while (mo != nullptr)
+        {
+            if (mo == baseMetaObject)
+                return true;
+
+            mo = mo->superClass();
+        }
+
+        return false;
+#endif
+    }
 } // namespace internal
 } // namespace PM
+
+#if QT_VERSION <= QT_VERSION_CHECK(5, 5, 0)
+inline uint qHash(const QKeySequence &key, uint seed) noexcept
+{
+    return qHash(key.toString(), seed);
+}
+#endif
 
 #endif // COMPAT_QT_H

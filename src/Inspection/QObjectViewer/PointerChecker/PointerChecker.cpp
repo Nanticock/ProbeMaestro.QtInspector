@@ -11,7 +11,7 @@ bool isReadableAddress(HANDLE hProcess, const void *address, size_t nSize)
     QByteArray buffer(int(nSize), 0x0);
 
     // A variable to store the number of bytes read
-    size_t bytesRead;
+    SIZE_T bytesRead;
 
     // Try to read from the target process
     return ReadProcessMemory(hProcess, address, buffer.data(), nSize, &bytesRead) != 0;

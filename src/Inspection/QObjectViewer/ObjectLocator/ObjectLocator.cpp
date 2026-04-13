@@ -9,6 +9,7 @@
 
 #include <QApplication>
 #include <QtQml>
+#include <qlogging.h>
 
 static CacheRepo s_pathsCacheRepo;
 static CacheRepo s_windowsCacheRepo;
@@ -88,7 +89,7 @@ bool ObjectLocator::indexAllAvailablePointers()
 
     QList<QQuickWindow *> qmlWindows = getQmlWindows();
 
-    for (QQuickWindow *window : qAsConst(qmlWindows))
+    for (QQuickWindow *window : PM::internal::qAsConst(qmlWindows))
         indexAllAvailablePointers(window);
 
     return true;
@@ -154,7 +155,7 @@ bool ObjectLocator::indexAllAvailablePointers(QObject *rootObject)
                 continue;
 
             // if current object inherits the same meta object given by the user, then we add it to the result
-            if (propertyValue->metaObject()->inherits(metaObject))
+            if (PM::internal::qMetaObjectInherits(propertyValue->metaObject(), metaObject))
                 indexAllAvailablePointers(propertyValue);
         }
     }
@@ -228,7 +229,7 @@ QObjectList ObjectLocator::searchForQmlObjectsOfType(const QString &typeName, bo
     QList<QQuickWindow *> qmlWindows = getQmlWindows();
 
     QSet<QObject *> visitedItems;
-    for (QQuickWindow *window : qAsConst(qmlWindows))
+    for (QQuickWindow *window : PM::internal::qAsConst(qmlWindows))
     {
         if (window == nullptr)
             continue;
@@ -332,7 +333,7 @@ QList<QMetaProperty> ObjectLocator::getObjectPropertiesOfType(const QObject *obj
             continue;
 
         // if current object inherits the same meta object given by the user, then we add it to the result
-        if (propertyValue->metaObject()->inherits(metaObject))
+        if (PM::internal::qMetaObjectInherits(propertyValue->metaObject(), metaObject))
             result << property;
     }
 
@@ -445,7 +446,7 @@ QObject *ObjectLocator::getQmlObjectByPath(const QString &path)
 
     QList<QQuickWindow *> qmlWindows = getQmlWindows(rootObjectName);
 
-    for (QQuickWindow *window : qAsConst(qmlWindows))
+    for (QQuickWindow *window : PM::internal::qAsConst(qmlWindows))
     {
         QObject *result = getQmlObjectByPath(remainingPath, window);
 
@@ -473,7 +474,7 @@ QObject *ObjectLocator::getQmlObjectByPath(const QString &path, QQmlContext *con
     if (remainingPath.isEmpty())
         return qmlWindows.first();
 
-    for (QQuickWindow *window : qAsConst(qmlWindows))
+    for (QQuickWindow *window : PM::internal::qAsConst(qmlWindows))
     {
         QObject *result = getQmlObjectByPath(remainingPath, window, context);
 
@@ -661,7 +662,7 @@ QObject *ObjectLocator::getQmlObjectById(const QString &id)
 
     QWindowList allWindows = QApplication::allWindows();
 
-    for (QWindow *window : qAsConst(allWindows))
+    for (QWindow *window : PM::internal::qAsConst(allWindows))
     {
         QObject *object = getQmlObjectById(id, window);
 
@@ -723,7 +724,7 @@ QList<QQuickWindow *> ObjectLocator::getQmlWindows(const QString &nameFilter, co
     QList<QQuickWindow *> result;
 
     QWindowList allWindows = QApplication::allWindows();
-    for (QWindow *window : qAsConst(allWindows))
+    for (QWindow *window : PM::internal::qAsConst(allWindows))
     {
         QQuickWindow *qmlWindow = dynamic_cast<QQuickWindow *>(window);
 
@@ -737,8 +738,8 @@ QList<QQuickWindow *> ObjectLocator::getQmlWindows(const QString &nameFilter, co
         // if nameFilter isn't empty, then only include windows with the given nameFilter
         if (!nameFilter.isEmpty())
         {
-            QString qmlId = getQmlObjectId(qmlWindow);
-            QString windowName = qmlWindow->objectName();
+            const QString qmlId = getQmlObjectId(qmlWindow);
+            const QString windowName = qmlWindow->objectName();
 
             if (cachingIsEnabled())
             {

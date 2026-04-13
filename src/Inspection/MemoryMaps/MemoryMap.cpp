@@ -169,7 +169,7 @@ bool MemoryMapPrivate::satisfiesFilter(const MemoryMapEntry &entry, const Memory
     return true;
 }
 
-MemoryMap::FilterOptions::FilterOptions() : FilterOptions("", {})
+MemoryMap::FilterOptions::FilterOptions() : FilterOptions("", tags_t())
 {
 }
 

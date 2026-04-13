@@ -13,6 +13,7 @@
 #include "VariantListPropertyEditor.h"
 #include "VariantMapPropertyEditor.h"
 #include "VariantPropertyEditor.h"
+#include <compat_Qt.h>
 
 #include <QApplication>
 #include <QClipboard>
@@ -21,6 +22,8 @@
 #include <QMenu>
 #include <QMetaProperty>
 #include <QScreen>
+
+#include <typeinfo>
 
 QList<IPropertyEditorPtr> IPropertyEditorPrivate::s_defaultEditors;
 IPropertyEditorPtr IPropertyEditorPrivate::s_defaultPropertyEditor = IPropertyEditorPtr::create();
@@ -276,7 +279,7 @@ bool IPropertyEditor::registerDefaultEditor(IPropertyEditorPtr editor)
     if (editor.isNull())
         return false;
 
-    for (IPropertyEditorPtr defaultEditor : qAsConst(IPropertyEditorPrivate::s_defaultEditors))
+    for (const IPropertyEditorPtr &defaultEditor : PM::internal::qAsConst(IPropertyEditorPrivate::s_defaultEditors))
     {
         if (defaultEditor->uid() == editor->uid())
             return false;
@@ -291,7 +294,7 @@ bool IPropertyEditor::unregisterDefaultEditor(IPropertyEditorPtr editor)
     if (editor.isNull())
         return false;
 
-    for (IPropertyEditorPtr defaultEditor : qAsConst(IPropertyEditorPrivate::s_defaultEditors))
+    for (const IPropertyEditorPtr &defaultEditor : PM::internal::qAsConst(IPropertyEditorPrivate::s_defaultEditors))
     {
         if (defaultEditor->uid() != editor->uid())
             continue;

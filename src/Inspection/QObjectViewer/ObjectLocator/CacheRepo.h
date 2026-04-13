@@ -2,6 +2,7 @@
 #define CACHEREPO_H
 
 #include <QHash>
+#include <QString>
 
 class CacheRepo
 {

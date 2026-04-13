@@ -10,6 +10,7 @@
 #include <QPlainTextEdit>
 #include <QSettings>
 #include <QSortFilterProxyModel>
+#include <QVBoxLayout>
 
 static const char m_settingsGroupName[] = "probemaestro.qt_inspector.gui.main_window";
 
@@ -173,7 +174,7 @@ void MainWindow::onExportAllResourcesTriggered()
     if (!fileDialog.exec())
         return;
 
-    outputPath = fileDialog.selectedFiles().constFirst();
+    outputPath = fileDialog.selectedFiles().first();
 
     QVector<QDir> subdirs;
     subdirs << QDir(resourcesBaseDirPath);
