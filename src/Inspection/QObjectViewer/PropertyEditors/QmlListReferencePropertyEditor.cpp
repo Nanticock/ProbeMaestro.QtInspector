@@ -42,7 +42,7 @@ QTreeWidgetItem *QmlListReferencePropertyEditor::createPropertyTreeItem(const Pr
 
     // create the itemLabel
     QLabel *itemLabel = new QLabel();
-    itemLabel->setFont(QFont("", -1, QFont::Light, true));
+    itemLabel->setFont(QFont("", -1, PM::internal::QFont_Thin, true));
     itemLabel->setText(
         QString("QQmlReferenceList<%1> [Length = %2]").arg(qmlListReference.listElementType()->className()).arg(qmlListReference.count()));
     itemLabel->setSelection(0, 10);

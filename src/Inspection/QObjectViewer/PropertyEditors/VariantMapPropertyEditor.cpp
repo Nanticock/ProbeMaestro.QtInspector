@@ -42,7 +42,7 @@ QTreeWidgetItem *VariantMapPropertyEditor::createPropertyTreeItem(const Property
 
     // create the itemLabel
     QLabel *itemLabel = new QLabel();
-    itemLabel->setFont(QFont("", -1, QFont::Normal, true));
+    itemLabel->setFont(QFont("", -1, PM::internal::QFont_Thin, true));
     itemLabel->setText(QString("[Length = %1]").arg(variantMap.count()));
     itemLabel->setSelection(0, 10);
     itemLabel->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum));

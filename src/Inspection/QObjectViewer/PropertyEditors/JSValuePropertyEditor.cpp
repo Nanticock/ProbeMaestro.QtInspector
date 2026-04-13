@@ -48,7 +48,7 @@ QTreeWidgetItem *JSValuePropertyEditor::createPropertyTreeItem(const PropertyDat
 
     // create the itemLabel
     QLabel *itemLabel = new QLabel();
-    itemLabel->setFont(QFont("", -1, QFont::Weight::Light, true));
+    itemLabel->setFont(QFont("", -1, PM::internal::QFont_Thin, true));
     itemLabel->setText(QString("QJSValue(%1)").arg(jsValue.toVariant().typeName()));
     itemLabel->setSelection(0, 10);
     itemLabel->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum));

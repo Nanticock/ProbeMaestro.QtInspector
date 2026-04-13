@@ -840,7 +840,7 @@ void QObjectViewer::updateMethodsItem()
         methodItem->setText(1, s_methodAccessMap[metaMethod.access()] + " " + s_methodTypeMap[metaMethod.methodType()]);
         methodItem->setText(2, metaMethod.methodSignature());
 
-        methodItem->setFont(1, QFont("", -1, QFont::Light, true));
+        methodItem->setFont(1, QFont("", -1, PM::internal::QFont_Thin, true));
         methodItem->setForeground(1, Qt::darkGray);
 
         // Get the return type and parameters of the method

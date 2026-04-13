@@ -34,6 +34,12 @@ namespace internal
     template <typename T>
     void qAsConst(const T &&) = delete;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+    const int QFont_Thin = QFont::Thin;
+#else
+    const int QFont_Thin = 0;
+#endif
+
     inline int getMetaTypeId(const QMetaType &type)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
